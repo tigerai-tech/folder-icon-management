@@ -51,11 +51,21 @@ export default {
   iconApplier: {
     stepTitle: 'Step 3: Apply Icon',
     applyBtn: 'Apply icon to folder',
+    resetBtn: 'Reset to default icon',
     selectIconFirst: 'Please select an icon first',
     selectFolderFirst: 'Please select a folder first',
     applying: 'Applying icon, please wait...',
+    resetting: 'Resetting folder icon, please wait...',
     applySuccess: 'Icon applied successfully',
-    applyError: 'Error applying icon: {0}'
+    resetSuccess: 'Folder icon reset to default successfully',
+    applyError: 'Error applying icon: {0}',
+    resetError: 'Error resetting icon: {0}',
+    copyingIcon: 'Copying built-in icon to Downloads folder...',
+    iconCopied: 'Icon copied to Downloads folder',
+    copyError: 'Failed to copy icon to Downloads folder',
+    apiError: 'API not available, unable to copy icon',
+    preparingIcon: 'Preparing icon, please wait...',
+    iconReady: 'Icon ready to use'
   },
   languageSelector: {
     zh: 'Chinese',

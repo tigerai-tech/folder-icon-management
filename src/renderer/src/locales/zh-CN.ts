@@ -51,11 +51,21 @@ export default {
   iconApplier: {
     stepTitle: '步骤 3: 应用图标',
     applyBtn: '应用图标到文件夹',
+    resetBtn: '重置为默认图标',
     selectIconFirst: '请先选择一个图标',
     selectFolderFirst: '请先选择一个文件夹',
     applying: '正在应用图标，请稍候...',
+    resetting: '正在重置文件夹图标，请稍候...',
     applySuccess: '图标已成功应用到文件夹',
-    applyError: '应用图标失败: {0}'
+    resetSuccess: '文件夹图标已成功重置为默认',
+    applyError: '应用图标失败: {0}',
+    resetError: '重置图标失败: {0}',
+    copyingIcon: '正在将内置图标复制到下载文件夹...',
+    iconCopied: '图标已复制到下载文件夹',
+    copyError: '复制图标到下载文件夹失败',
+    apiError: 'API不可用，无法复制图标',
+    preparingIcon: '正在准备图标，请稍候...',
+    iconReady: '图标已准备就绪'
   },
   languageSelector: {
     zh: '中文',

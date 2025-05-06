@@ -11,6 +11,17 @@ declare global {
       getFilePath: (file: File) => string | null
       selectIconFile: () => Promise<string | null>
       getBase64FromFilePath: (filePath: string) => Promise<string>
+      copyIconToDownloads: (iconPath: string) => Promise<{
+        success: boolean,
+        filePath?: string,
+        fileName?: string,
+        error?: string
+      }>
+      getInternalIconPath: (iconPath: string) => Promise<{
+        success: boolean,
+        iconPath?: string,
+        error?: string
+      }>
     }
   }
 }

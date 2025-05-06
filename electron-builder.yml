@@ -11,6 +11,7 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+  - build/extra-resources/**
   - "**/*.{node,so,dll,dylib}"
 extraResources:
   - from: "resources/lib"
@@ -20,6 +21,9 @@ extraResources:
     to: "icons"
     filter: ["**/*"]
   - from: "resources/icons"
+    to: "icons"
+    filter: ["**/*.png"]
+  - from: "build/extra-resources/icons"
     to: "icons"
     filter: ["**/*.png"]
 win:

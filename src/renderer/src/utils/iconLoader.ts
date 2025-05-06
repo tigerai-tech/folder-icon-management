@@ -101,6 +101,18 @@ const loadBuiltinIcons = (): IconItem[] => {
     const iconModules = import.meta.glob('../../../../build/extra-resources/icons/*.png', { eager: true });
     console.log('找到图标模块:', Object.keys(iconModules).length);
     
+    // 输出前几个图标路径做调试
+    if (Object.keys(iconModules).length > 0) {
+      const firstFewKeys = Object.keys(iconModules).slice(0, 3);
+      console.log('图标路径示例:', firstFewKeys);
+      
+      // 检查路径格式
+      firstFewKeys.forEach(key => {
+        // @ts-ignore - 模块类型
+        console.log('图标实际路径:', (iconModules[key] as any).default);
+      });
+    }
+    
     // 处理每个导入的图标
     Object.entries(iconModules).forEach(([path, module]) => {
       // 从路径中提取文件名
@@ -114,20 +126,30 @@ const loadBuiltinIcons = (): IconItem[] => {
       // 格式化显示名称
       const displayName = formatDisplayName(fileName);
       
-      // console.log('加载图标:', displayName, path);
-      // console.log('图标关键词:', keywords.join(', '));
+      // @ts-ignore - 模块类型
+      const imagePath = (module as any).default;
+      console.log(`加载图标: ${displayName}, 文件名: ${fileName}, 路径: ${imagePath}`);
       
       // 添加到图标列表
       icons.push({
         name: displayName,
         // @ts-ignore - 模块类型
-        path: (module as any).default,
+        path: imagePath,
         keywords: keywords,
         originalFileName: nameWithoutExt
       });
     });
     
     console.log('成功加载内置图标数量:', icons.length);
+    
+    // 调试：显示一些图标路径
+    if (icons.length > 0) {
+      console.log('第一个图标信息:', {
+        name: icons[0].name,
+        path: icons[0].path,
+        originalFileName: icons[0].originalFileName
+      });
+    }
   } catch (error) {
     console.error('加载内置图标失败:', error);
   }

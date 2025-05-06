@@ -43,32 +43,6 @@ const getInternalFileiconPath = (): string => {
   }
 }
 
-// 获取应用资源图标路径
-const getResourceIconPath = (iconName: string): string | null => {
-  // 尝试从各种可能的位置找到图标
-  const possibleLocations = [
-    // 开发环境
-    join(process.cwd(), 'resources', 'icons', iconName),
-    // 生产环境 - extraResources
-    join(process.resourcesPath, 'icons', iconName),
-    // 生产环境 - app.asar.unpacked
-    join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'icons', iconName),
-    // 默认图标
-    join(process.resourcesPath, 'icons', 'default.png'),
-    join(process.cwd(), 'resources', 'icon.png')
-  ];
-  
-  for (const location of possibleLocations) {
-    if (fsSync.existsSync(location)) {
-      console.log(`找到图标: ${location}`);
-      return location;
-    }
-  }
-  
-  console.error(`无法找到图标: ${iconName}`);
-  return null;
-}
-
 // 定义全局IPC处理程序注册标志，防止重复注册
 let ipcHandlersRegistered = false;
 
@@ -84,6 +58,7 @@ function createWindow(): BrowserWindow {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
+      devTools: true,
       nodeIntegration: true,
       contextIsolation: true,
       webSecurity: true, // 开启网页安全
@@ -234,6 +209,7 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('apply-icon', async (_, args) => {
     try {
       const { folderPath, iconPath } = args
+      
       console.log(`正在处理文件夹: ${folderPath}`)
       console.log(`正在使用ICON: ${iconPath}`)
       // 检查路径是否有效
@@ -247,7 +223,6 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
         if (!stats.isDirectory()) {
           throw new Error('所选路径不是有效的文件夹')
         }
-
       } catch (error: any) {
         console.error(`检查文件夹错误: ${error.message}`)
         if (error.code === 'ENOENT') {
@@ -326,19 +301,63 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
             // 提取图标名称用于从资源目录查找
             const iconBasename = path.basename(finalIconPath);
             
-            // 使用辅助函数查找图标
-            const resourceIconPath = getResourceIconPath(iconBasename);
+            // 尝试从多个可能的位置找到图标
+            let iconFound = false;
             
-            if (resourceIconPath) {
-              // 使用找到的资源图标
-              await fs.copyFile(resourceIconPath, tempIconPath);
-              realIconPath = tempIconPath;
-            } else {
-              // 如果找不到特定图标，尝试使用默认图标
-              console.log('使用应用内置默认图标');
-              const defaultIconPath = getResourceIconPath('default.png');
+            // 尝试查找图标的所有可能路径（优先级从高到低）
+            const possibleLocations = [
+              // 1. 在开发环境中检查相对路径
+              is.dev ? join(process.cwd(), 'build/extra-resources/icons', iconBasename) : null,
               
-              if (defaultIconPath) {
+              // 2. app.getPath('userData') 可能会存储用户数据
+              join(app.getPath('userData'), 'icons', iconBasename),
+              
+              // 3. 从extraResources找
+              join(process.resourcesPath, 'icons', iconBasename),
+              
+              // 4. 从应用资源目录找
+              join(process.resourcesPath, 'app.asar.unpacked', 'build', 'extra-resources', 'icons', iconBasename),
+              
+              // 5. 从resources/icons目录找
+              join(process.resourcesPath, 'icons', iconBasename),
+              
+              // 6. 直接从extra-resources目录找
+              join(process.resourcesPath, 'app.asar.unpacked', 'extra-resources', 'icons', iconBasename),
+              
+              // 7. 尝试简单的相对路径
+              iconPath,
+              
+              // 8. 尝试从app.asar.unpacked找
+              finalIconPath.replace('app.asar', 'app.asar.unpacked'),
+              
+              // 9. 尝试使用默认图标 (多种可能的位置)
+              join(process.resourcesPath, 'icons', 'default.png'),
+              join(process.resourcesPath, 'app.asar.unpacked', 'build', 'icons', 'default.png'),
+              join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'icons', 'default.png'),
+              
+              // 10. 最后使用应用图标（通常一定可用）
+              join(process.resourcesPath, 'icon.png')
+            ].filter(Boolean); // 过滤掉null值
+            
+            console.log('主进程: 尝试查找图标的所有可能路径:', possibleLocations);
+            
+            for (const location of possibleLocations) {
+              console.log('主进程: 尝试查找图标位置:', location);
+              if (fsSync.existsSync(location)) {
+                console.log('主进程: 找到图标位置:', location);
+                await fs.copyFile(location, tempIconPath);
+                iconFound = true;
+                realIconPath = tempIconPath;
+                break;
+              }
+            }
+            
+            // 如果都找不到，复制内部图标到临时目录（从应用资源目录）
+            if (!iconFound) {
+              console.log('使用应用内置默认图标');
+              // 使用默认图标 - 从resources中提取
+              const defaultIconPath = join(process.cwd(), 'resources', 'icon.png');
+              if (fsSync.existsSync(defaultIconPath)) {
                 await fs.copyFile(defaultIconPath, tempIconPath);
                 realIconPath = tempIconPath;
               } else {
@@ -567,6 +586,424 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
     shell.openExternal(url)
   })
 
+  // 处理将内置图标复制到Downloads目录
+  ipcMain.handle('copy-icon-to-downloads', async (_, iconPath) => {
+    console.log('主进程: 准备复制图标到Downloads文件夹:', iconPath);
+    
+    try {
+      // 获取Downloads文件夹路径
+      const downloadsPath = app.getPath('downloads');
+      console.log('主进程: 下载文件夹路径:', downloadsPath);
+      
+      // 如果是URL格式的图标，转换为文件
+      if (iconPath.startsWith('data:') || iconPath.startsWith('blob:')) {
+        try {
+          // 使用用户可访问的临时目录
+          const tempDir = app.getPath('temp');
+          const randomName = `temp_icon_${Date.now()}.png`;
+          const tempPath = join(tempDir, randomName);
+          
+          // 从Base64提取数据部分
+          const base64Data = iconPath.split(',')[1];
+          if (base64Data) {
+            await fs.writeFile(tempPath, Buffer.from(base64Data, 'base64'));
+            
+            // 生成目标文件名
+            const timestamp = Date.now();
+            const targetFileName = `icon_${timestamp}_base64.png`;
+            const targetPath = join(downloadsPath, targetFileName);
+            
+            // 复制文件到Downloads文件夹
+            await fs.copyFile(tempPath, targetPath);
+            
+            // 清理临时文件
+            await fs.unlink(tempPath);
+            
+            return {
+              success: true,
+              filePath: targetPath,
+              fileName: targetFileName
+            };
+          } else {
+            throw new Error('无效的图标数据格式');
+          }
+        } catch (error: any) {
+          console.error('创建临时图标文件失败:', error);
+          throw error;
+        }
+      } else {
+        // 处理文件路径或asar内资源的情况
+        
+        // 提取图标文件名
+        let iconFileName = '';
+        let sourceImagePath = '';
+        
+        // 处理不同类型的路径
+        if (iconPath.startsWith('/@fs/')) {
+          // Vite开发模式下的路径: /@fs/Users/user/project/...
+          // 去除/@fs/前缀，获取实际路径
+          sourceImagePath = iconPath.substring(4).split('?')[0];
+          iconFileName = path.basename(sourceImagePath);
+        } else if (iconPath.startsWith('file://')) {
+          // 文件协议URL
+          sourceImagePath = decodeURIComponent(iconPath.replace('file://', '')).split('?')[0];
+          iconFileName = path.basename(sourceImagePath);
+        } else if (iconPath.includes('/build/extra-resources/icons/') || iconPath.includes('/icons/')) {
+          // 处理相对路径或特定路径模式
+          // 提取图标文件名
+          const matches = iconPath.match(/\/(icons|build\/extra-resources\/icons)\/([^/?]+)/);
+          if (matches && matches[2]) {
+            iconFileName = matches[2];
+          } else {
+            iconFileName = path.basename(iconPath.split('?')[0]);
+          }
+          
+          // 尝试从不同位置查找图标文件
+          console.log('解析出的图标文件名:', iconFileName);
+          
+          // 构建可能的图标路径
+          const possiblePaths: string[] = [];
+          
+          if (app.isPackaged) {
+            // 生产环境 - 应用已打包
+            console.log('生产环境: 查找打包资源');
+            
+            // 从 app.asar 和 resources 目录查找
+            const resourcesPath = process.resourcesPath;
+            
+            // 资源目录中的图标文件夹
+            possiblePaths.push(join(resourcesPath, 'icons', iconFileName));
+            
+            // asar包根目录
+            const appPath = app.getAppPath(); // 指向 app.asar
+            possiblePaths.push(join(appPath, 'build', 'extra-resources', 'icons', iconFileName));
+            
+            // asar.unpacked 目录 (不会被压缩到asar的文件)
+            const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
+            possiblePaths.push(join(unpackedPath, 'build', 'extra-resources', 'icons', iconFileName));
+            possiblePaths.push(join(unpackedPath, 'resources', 'icons', iconFileName));
+            
+            // 直接从__dirname尝试定位
+            possiblePaths.push(join(__dirname, '..', 'icons', iconFileName));
+            possiblePaths.push(join(__dirname, '../..', 'icons', iconFileName));
+          } else {
+            // 开发环境
+            console.log('开发环境: 查找开发资源');
+            
+            // 项目根目录 (通常是package.json所在目录)
+            const rootPath = app.getAppPath();
+            possiblePaths.push(join(rootPath, 'build', 'extra-resources', 'icons', iconFileName));
+            possiblePaths.push(join(rootPath, 'resources', 'icons', iconFileName));
+            possiblePaths.push(join(rootPath, 'public', 'icons', iconFileName));
+            
+            // 开发环境下可能的其他位置
+            possiblePaths.push(join(process.cwd(), 'build', 'extra-resources', 'icons', iconFileName));
+          }
+          
+          // 当作绝对路径直接尝试
+          possiblePaths.push(iconPath.split('?')[0]);
+          
+          // 检查所有可能的路径
+          let iconFound = false;
+          
+          console.log('主进程: 尝试查找图标的所有可能路径:', possiblePaths);
+          
+          for (const testPath of possiblePaths) {
+            console.log('尝试路径:', testPath);
+            if (fsSync.existsSync(testPath)) {
+              console.log('图标文件找到:', testPath);
+              sourceImagePath = testPath;
+              iconFound = true;
+              break;
+            }
+          }
+          
+          if (!iconFound) {
+            console.error('无法找到图标文件:', iconFileName);
+            throw new Error(`无法找到图标文件: ${iconFileName}。请选择其他图标或联系支持团队。`);
+          }
+        } else {
+          // 尝试作为直接文件路径处理
+          sourceImagePath = iconPath;
+          iconFileName = path.basename(sourceImagePath);
+        }
+        
+        // 确保源路径有效
+        if (!sourceImagePath || !fsSync.existsSync(sourceImagePath)) {
+          console.error('源图标文件不存在:', sourceImagePath);
+          throw new Error(`源图标文件不存在: ${sourceImagePath}`);
+        }
+        
+        console.log('主进程: 源图标文件存在:', sourceImagePath);
+        
+        // 生成唯一的目标文件名
+        const timestamp = Date.now();
+        const targetFileName = `icon_${timestamp}_${iconFileName.replace(/[^\w.-]/g, '_')}`;
+        const targetPath = join(downloadsPath, targetFileName);
+        console.log('主进程: 目标文件路径:', targetPath);
+        
+        // 复制文件到Downloads文件夹
+        await fs.copyFile(sourceImagePath, targetPath);
+        
+        console.log('主进程: 图标已复制到Downloads文件夹:', targetPath);
+        
+        // 返回复制后的文件路径
+        return {
+          success: true,
+          filePath: targetPath,
+          fileName: targetFileName
+        };
+      }
+    } catch (error: any) {
+      console.error('复制图标到Downloads文件夹失败:', error);
+      return {
+        success: false,
+        error: error.message || '复制图标失败'
+      };
+    }
+  });
+
+  // 处理重置文件夹图标（取消自定义图标）
+  ipcMain.handle('reset-folder-icon', async (_, folderPath) => {
+    console.log('主进程: 重置文件夹图标:', folderPath);
+    
+    try {
+      // 验证文件夹路径
+      try {
+        const stats = await fs.stat(folderPath);
+        if (!stats.isDirectory()) {
+          throw new Error('所选路径不是有效的文件夹');
+        }
+      } catch (error: any) {
+        console.error(`检查文件夹错误: ${error.message}`);
+        if (error.code === 'ENOENT') {
+          throw new Error(`找不到文件夹: ${folderPath}`);
+        }
+        throw error;
+      }
+      
+      // 获取fileicon工具路径
+      const fileiconPath = getInternalFileiconPath();
+      console.log(`使用fileicon工具重置图标: ${fileiconPath}`);
+      
+      // 检查fileicon工具是否存在
+      try {
+        await fs.access(fileiconPath, fs.constants.F_OK | fs.constants.X_OK);
+      } catch (accessError) {
+        console.error('fileicon工具不存在或没有执行权限:', accessError);
+        throw new Error('内部fileicon工具无法访问。请重新安装应用或联系支持团队。');
+      }
+      
+      // 设置执行权限
+      try {
+        await fs.chmod(fileiconPath, 0o755);
+      } catch (chmodError) {
+        console.error('无法设置fileicon工具的执行权限:', chmodError);
+        throw new Error('无法设置内部工具的执行权限。请以管理员身份运行应用。');
+      }
+      
+      // 在生产环境下，临时复制fileicon到临时目录确保有执行权限
+      let execPath = fileiconPath;
+      if (!is.dev) {
+        const tempDir = app.getPath('temp');
+        const tempFileiconPath = join(tempDir, `fileicon_${Date.now()}`);
+        
+        // 复制文件到临时目录
+        try {
+          await fs.copyFile(fileiconPath, tempFileiconPath);
+          await fs.chmod(tempFileiconPath, 0o755);
+          execPath = tempFileiconPath;
+          console.log('使用临时fileicon路径:', execPath);
+        } catch (copyError) {
+          console.error('复制fileicon文件失败:', copyError);
+          // 继续使用原路径
+        }
+      }
+      
+      // 执行fileicon命令，使用remove参数
+      // 注意：fileicon remove 命令用于删除自定义图标，恢复默认图标
+      try {
+        console.log('执行命令:', execPath, ['remove', folderPath]);
+        const result = await execFileAsync(execPath, ['remove', folderPath]);
+        console.log('fileicon执行结果:', result);
+        
+        // 如果用了临时文件，尝试清理
+        if (execPath !== fileiconPath) {
+          fs.unlink(execPath).catch(e => console.warn('清理临时文件失败:', e));
+        }
+        
+        // 刷新Finder缓存以便立即显示
+        try {
+          await execFileAsync('touch', [folderPath]);
+        } catch (touchError: any) {
+          console.warn('刷新Finder缓存失败:', touchError);
+          // 这不是关键错误，可以继续
+        }
+        
+        return { success: true, message: '文件夹图标已成功重置为默认' };
+      } catch (execError: any) {
+        console.error('执行fileicon remove工具失败:', execError);
+        
+        // 更具体的错误信息
+        if (execError.code === 'ENOENT') {
+          throw new Error(`找不到fileicon工具: ${execPath}`);
+        } else if (execError.code === 'EACCES') {
+          throw new Error(`没有权限执行fileicon工具。请尝试以管理员身份运行应用或重新安装应用。`);
+        } else {
+          throw new Error(`重置图标失败: ${execError.message || '未知错误'}`);
+        }
+      }
+    } catch (error: any) {
+      console.error('重置图标失败:', error);
+      throw error;
+    }
+  });
+
+  // 获取内部图标文件的真实路径（不复制到Downloads）
+  ipcMain.handle('get-internal-icon-path', async (_, iconPath) => {
+    console.log('主进程: 获取内部图标真实路径:', iconPath);
+    
+    try {
+      // 处理不同类型的路径情况
+      let realIconPath = '';
+      
+      // 如果是data:或blob:URL，需要创建临时文件
+      if (iconPath.startsWith('data:') || iconPath.startsWith('blob:')) {
+        try {
+          // 使用用户可访问的临时目录
+          const tempDir = app.getPath('temp');
+          const randomName = `temp_icon_${Date.now()}.png`;
+          const tempPath = join(tempDir, randomName);
+          
+          // 从Base64提取数据部分
+          const base64Data = iconPath.split(',')[1];
+          if (base64Data) {
+            await fs.writeFile(tempPath, Buffer.from(base64Data, 'base64'));
+            realIconPath = tempPath;
+          } else {
+            throw new Error('无效的图标数据格式');
+          }
+        } catch (error: any) {
+          console.error('创建临时图标文件失败:', error);
+          throw error;
+        }
+      } else {
+        // 处理文件路径或asar内资源的情况
+        
+        // 提取图标文件名
+        let iconFileName = '';
+        
+        // 处理不同类型的路径
+        if (iconPath.startsWith('/@fs/')) {
+          // Vite开发模式下的路径: /@fs/Users/user/project/...
+          // 去除/@fs/前缀，获取实际路径
+          realIconPath = iconPath.substring(4).split('?')[0];
+          iconFileName = path.basename(realIconPath);
+        } else if (iconPath.startsWith('file://')) {
+          // 文件协议URL
+          realIconPath = decodeURIComponent(iconPath.replace('file://', '')).split('?')[0];
+          iconFileName = path.basename(realIconPath);
+        } else if (iconPath.includes('/build/extra-resources/icons/') || iconPath.includes('/icons/')) {
+          // 处理相对路径或特定路径模式
+          // 提取图标文件名
+          const matches = iconPath.match(/\/(icons|build\/extra-resources\/icons)\/([^/?]+)/);
+          if (matches && matches[2]) {
+            iconFileName = matches[2];
+          } else {
+            iconFileName = path.basename(iconPath.split('?')[0]);
+          }
+          
+          // 尝试从不同位置查找图标文件
+          console.log('解析出的图标文件名:', iconFileName);
+          
+          // 构建可能的图标路径
+          const possiblePaths: string[] = [];
+          
+          if (app.isPackaged) {
+            // 生产环境 - 应用已打包
+            console.log('生产环境: 查找打包资源');
+            
+            // 从 app.asar 和 resources 目录查找
+            const resourcesPath = process.resourcesPath;
+            
+            // 资源目录中的图标文件夹
+            possiblePaths.push(join(resourcesPath, 'icons', iconFileName));
+            
+            // asar包根目录
+            const appPath = app.getAppPath(); // 指向 app.asar
+            possiblePaths.push(join(appPath, 'build', 'extra-resources', 'icons', iconFileName));
+            
+            // asar.unpacked 目录 (不会被压缩到asar的文件)
+            const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
+            possiblePaths.push(join(unpackedPath, 'build', 'extra-resources', 'icons', iconFileName));
+            possiblePaths.push(join(unpackedPath, 'resources', 'icons', iconFileName));
+            
+            // 直接从__dirname尝试定位
+            possiblePaths.push(join(__dirname, '..', 'icons', iconFileName));
+            possiblePaths.push(join(__dirname, '../..', 'icons', iconFileName));
+          } else {
+            // 开发环境
+            console.log('开发环境: 查找开发资源');
+            
+            // 项目根目录 (通常是package.json所在目录)
+            const rootPath = app.getAppPath();
+            possiblePaths.push(join(rootPath, 'build', 'extra-resources', 'icons', iconFileName));
+            possiblePaths.push(join(rootPath, 'resources', 'icons', iconFileName));
+            possiblePaths.push(join(rootPath, 'public', 'icons', iconFileName));
+            
+            // 开发环境下可能的其他位置
+            possiblePaths.push(join(process.cwd(), 'build', 'extra-resources', 'icons', iconFileName));
+          }
+          
+          // 当作绝对路径直接尝试
+          possiblePaths.push(iconPath.split('?')[0]);
+          
+          // 检查所有可能的路径
+          let iconFound = false;
+          
+          console.log('主进程: 尝试查找图标的所有可能路径:', possiblePaths);
+          
+          for (const testPath of possiblePaths) {
+            console.log('尝试路径:', testPath);
+            if (fsSync.existsSync(testPath)) {
+              console.log('图标文件找到:', testPath);
+              realIconPath = testPath;
+              iconFound = true;
+              break;
+            }
+          }
+          
+          if (!iconFound) {
+            console.error('无法找到图标文件:', iconFileName);
+            throw new Error(`无法找到图标文件: ${iconFileName}。请选择其他图标或联系支持团队。`);
+          }
+        } else {
+          // 尝试作为直接文件路径处理
+          realIconPath = iconPath;
+        }
+        
+        // 确保源路径有效
+        if (!realIconPath || !fsSync.existsSync(realIconPath)) {
+          console.error('源图标文件不存在:', realIconPath);
+          throw new Error(`源图标文件不存在: ${realIconPath}`);
+        }
+      }
+      
+      console.log('主进程: 找到的内部图标真实路径:', realIconPath);
+      
+      return {
+        success: true,
+        iconPath: realIconPath
+      };
+    } catch (error: any) {
+      console.error('获取内部图标路径失败:', error);
+      return {
+        success: false,
+        error: error.message || '获取内部图标路径失败'
+      };
+    }
+  });
+
   // 标记处理程序已注册
   ipcHandlersRegistered = true;
 }
@@ -740,6 +1177,9 @@ app.on('before-quit', () => {
   ipcMain.removeHandler('apply-icon');
   ipcMain.removeHandler('read-file');
   ipcMain.removeHandler('download-icon-from-url');
+  ipcMain.removeHandler('copy-icon-to-downloads');
+  ipcMain.removeHandler('reset-folder-icon');
+  ipcMain.removeHandler('get-internal-icon-path');
   
   // 重置IPC处理程序注册标志
   ipcHandlersRegistered = false;

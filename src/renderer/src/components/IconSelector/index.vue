@@ -48,6 +48,9 @@ const selectedIconPath = ref<string>('');
 const selectIcon = (icon: { name: string; path: string; filePath?: string; originalFileName?: string }) => {
   // 如果存在真实文件路径，优先使用，否则使用URL路径
   const finalPath = icon.filePath || icon.path;
+  console.log('选择图标:', icon);
+  console.log('图标最终路径:', finalPath);
+  
   emit('update:selectedIcon', finalPath);
   emit('select', icon as IconItem);
   
