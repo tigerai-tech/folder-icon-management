@@ -98,14 +98,6 @@ const openIconFileDialog = async () => {
   }
 };
 
-// 处理文件输入变化
-const handleFileInputChange = (e: Event) => {
-  const input = e.target as HTMLInputElement;
-  if (input.files && input.files.length > 0) {
-    handleIconFile(input.files[0]);
-  }
-};
-
 // 当前激活的选项卡
 const activeKey = ref('default');
 </script>

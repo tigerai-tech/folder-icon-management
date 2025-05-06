@@ -1,8 +1,7 @@
 import { message } from 'ant-design-vue';
 import { i18n } from './i18n';
 
-// 获取i18n实例的t函数
-const t = i18n.global.t;
+i18n.global.t;
 
 /**
  * 显示成功消息
