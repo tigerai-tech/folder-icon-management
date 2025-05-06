@@ -26,6 +26,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@vicons/ionicons5": "^0.13.0",
     "ant-design-vue": "^3.2.0",
+    "axios": "^1.9.0",
     "file-type": "^20.5.0",
     "fileicon": "^0.3.3",
     "vue-i18n": "^9.0.0"

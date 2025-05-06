@@ -24,6 +24,15 @@ const handleIconSelect = (icon: IconItem) => {
   showSuccess(t('iconSelector.iconSelected', [icon.name]));
 };
 
+// 打开GitHub链接
+const openGitHub = () => {
+  if (window.electron && window.electron.ipcRenderer) {
+    window.electron.ipcRenderer.send('open-external-url', 'https://github.com/tigerai-tech/folder-icon-management');
+  } else {
+    window.open('https://github.com/tigerai-tech/folder-icon-management', '_blank');
+  }
+};
+
 // 初始化应用
 onMounted(() => {
   // 监听IPC消息 - 确保electron对象存在
@@ -50,14 +59,22 @@ onMounted(() => {
     <a-card>
       <a-divider />
       
-      <!-- 管理员权限提示 -->
-      <a-alert 
-        :message="t('common.warning')" 
-        :description="t('app.permissionTip')" 
-        type="warning" 
-        show-icon 
-        style="margin-bottom: 16px"
-      />
+      <!-- 使用须知区域 -->
+      <div class="notice-section">
+        <a-alert 
+          :message="t('app.usageNotice')" 
+          :description="t('app.permissionTip')" 
+          type="info" 
+          show-icon 
+          style="margin-bottom: 12px"
+        />
+        
+        <div class="support-link">
+          <a-button type="link" @click="openGitHub">
+            {{ t('app.guideText') }}
+          </a-button>
+        </div>
+      </div>
       
       <a-space direction="vertical" size="large" style="width: 100%">
         <!-- 图标选择区域 -->
@@ -84,8 +101,10 @@ onMounted(() => {
 <style>
 .container {
   padding: 20px;
-  max-width: 800px;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .header {
@@ -105,5 +124,14 @@ onMounted(() => {
 
 .step-card {
   margin-bottom: 16px;
+}
+
+.notice-section {
+  margin-bottom: 20px;
+}
+
+.support-link {
+  text-align: right;
+  margin-top: 4px;
 }
 </style>

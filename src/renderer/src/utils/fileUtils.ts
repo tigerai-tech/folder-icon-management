@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs';
 
 /**
  * 从文件路径创建Base64图像数据URL

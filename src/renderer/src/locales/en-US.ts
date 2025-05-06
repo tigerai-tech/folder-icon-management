@@ -1,7 +1,9 @@
 export default {
   app: {
     title: 'Mac Folder Icon Manager',
-    permissionTip: 'Modifying folder icons requires administrator permissions. If you encounter permission errors, make sure fileicon is installed (sudo npm install -g fileicon) and run this app with sudo.'
+    permissionTip: 'Modifying folder icons requires administrator permissions. If you encounter permission errors, try running this app with administrator privileges.',
+    usageNotice: 'Usage Notice',
+    guideText: 'Read Guide & Support Author'
   },
   common: {
     selected: 'Selected',
@@ -21,7 +23,21 @@ export default {
     supportFormats: 'Supports PNG, JPG, and SVG formats',
     iconAddedSuccess: 'Icon added: {0}',
     iconSelected: 'Icon selected: {0}',
-    formatError: 'Only PNG, JPG, and SVG formats are supported'
+    formatError: 'Only PNG, JPG, and SVG formats are supported',
+    searchPlaceholder: 'Search icons...',
+    noSearchResults: 'No matching icons found',
+    selectError: 'Error selecting icon file',
+    fromUrl: 'Add Icon from URL',
+    urlPlaceholder: 'Enter icon URL link...',
+    download: 'Download',
+    urlTip: 'Icon will be downloaded to your Downloads folder',
+    downloading: 'Downloading icon...',
+    downloadSuccess: 'Icon downloaded: {0}',
+    downloadFailed: 'Failed to download icon',
+    urlEmpty: 'Please enter an icon URL',
+    invalidUrl: 'Invalid URL format',
+    customIcons: 'Added Custom Icons',
+    iconPath: "Icon Path",
   },
   folderSelector: {
     stepTitle: 'Step 2: Select Folder',

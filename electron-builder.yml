@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: Mac Folder Icon Manager
+productName: Folder Icon Manager
 directories:
   buildResources: build
 files:
@@ -11,14 +11,26 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+  - "**/*.{node,so,dll,dylib}"
+extraResources:
+  - from: "resources/lib"
+    to: "lib"
+    filter: ["**/*"]
+  - from: "build/icons"
+    to: "icons"
+    filter: ["**/*"]
+  - from: "resources/icons"
+    to: "icons"
+    filter: ["**/*.png"]
 win:
-  executableName: mac-folder-icon-manager
+  executableName: folder-icon-manager
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  icon: build/icon.png
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -26,6 +38,7 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
+  hardenedRuntime: true
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:

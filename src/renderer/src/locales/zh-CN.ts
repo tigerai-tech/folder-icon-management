@@ -1,7 +1,9 @@
 export default {
   app: {
     title: 'Mac 文件夹图标管理器',
-    permissionTip: '修改文件夹图标需要管理员权限。如果遇到权限错误，请确保已安装fileicon (sudo npm install -g fileicon)，并使用 sudo 运行此应用。'
+    permissionTip: '修改文件夹图标需要管理员权限。如果遇到权限错误，请尝试以管理员身份运行此应用。',
+    usageNotice: '使用须知',
+    guideText: '阅读指南和支持作者'
   },
   common: {
     selected: '已选择',
@@ -21,7 +23,21 @@ export default {
     supportFormats: '支持 PNG, JPG 和 SVG 格式',
     iconAddedSuccess: '图标已添加: {0}',
     iconSelected: '已选择图标: {0}',
-    formatError: '只支持 PNG, JPG 和 SVG 格式的图标'
+    formatError: '只支持 PNG, JPG 和 SVG 格式的图标',
+    searchPlaceholder: '搜索图标...',
+    noSearchResults: '未找到匹配的图标',
+    selectError: '选择图标文件时发生错误',
+    fromUrl: '从网址添加图标',
+    urlPlaceholder: '输入图标的URL链接...',
+    download: '下载',
+    urlTip: '图标将下载到您的"下载"文件夹',
+    downloading: '正在下载图标...',
+    downloadSuccess: '图标已下载: {0}',
+    downloadFailed: '下载图标失败',
+    urlEmpty: '请输入图标URL',
+    invalidUrl: '无效的URL格式',
+    customIcons: '已添加的自定义图标',
+    iconPath: "图标路径",
   },
   folderSelector: {
     stepTitle: '步骤 2: 选择文件夹',
