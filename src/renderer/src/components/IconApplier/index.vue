@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 import { NButton, NSpace } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import { applyIconToFolder } from '../../utils/folderIconManager';
 import { showSuccess, showError, showInfo } from '../../utils/messageManager';
 
@@ -13,34 +14,37 @@ const emit = defineEmits<{
   (e: 'applied'): void;
 }>();
 
+// 使用i18n
+const { t } = useI18n();
+
 // 应用图标到文件夹
 const applyIcon = async () => {
   if (!props.selectedIcon) {
-    showError('请先选择一个图标');
+    showError(t('iconApplier.selectIconFirst'));
     return;
   }
   
   if (!props.selectedFolder) {
-    showError('请先选择一个文件夹');
+    showError(t('iconApplier.selectFolderFirst'));
     return;
   }
   
   try {
-    showInfo('正在应用图标，请稍候...');
+    showInfo(t('iconApplier.applying'));
 
     await applyIconToFolder(props.selectedFolder, props.selectedIcon);
     
-    showSuccess('图标已成功应用到文件夹');
+    showSuccess(t('iconApplier.applySuccess'));
     emit('applied');
   } catch (error) {
     console.error('应用图标失败:', error);
-    showError(`应用图标失败: ${error}`);
+    showError(t('iconApplier.applyError', [error]));
   }
 };
 </script>
 
 <template>
-  <n-card title="步骤 3: 应用图标" class="step-card">
+  <n-card :title="t('iconApplier.stepTitle')" class="step-card">
     <n-space justify="center">
       <n-button 
         type="primary" 
@@ -48,7 +52,7 @@ const applyIcon = async () => {
         :disabled="!selectedIcon || !selectedFolder"
         size="large"
       >
-        应用图标到文件夹
+        {{ t('iconApplier.applyBtn') }}
       </n-button>
     </n-space>
   </n-card>

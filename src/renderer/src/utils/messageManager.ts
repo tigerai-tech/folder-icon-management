@@ -1,5 +1,9 @@
 import { createDiscreteApi } from 'naive-ui';
 import type { MessageApi } from 'naive-ui';
+import { i18n } from './i18n';
+
+// 获取i18n实例的t函数
+const t = i18n.global.t;
 
 // 单例消息实例
 let messageInstance: MessageApi | null = null;

@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: folder-icon-management
+productName: Mac Folder Icon Manager
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: folder-icon-management
+  executableName: mac-folder-icon-manager
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

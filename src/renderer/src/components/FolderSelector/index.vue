@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, defineProps, defineEmits } from 'vue';
 import { NIcon, NGradientText, NButton } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import { FolderOpenOutline } from '@vicons/ionicons5';
 import { selectFolder, handleFolderDrop as processFolderDrop } from '../../utils/folderIconManager';
 import { showSuccess, showError } from '../../utils/messageManager';
@@ -11,6 +12,9 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'update:selectedFolder', value: string | null): void;
 }>();
+
+// 使用i18n
+const { t } = useI18n();
 
 // 拖拽状态
 const isDragging = ref(false);
@@ -26,13 +30,13 @@ const handleFolderDrop = async (e: DragEvent) => {
     
     if (folderPath) {
       emit('update:selectedFolder', folderPath);
-      showSuccess(`已选择文件夹: ${folderPath}`);
+      showSuccess(t('folderSelector.folderSelected', [folderPath]));
     } else {
-      showError('请拖拽一个有效的文件夹');
+      showError(t('folderSelector.invalidFolder'));
     }
   } catch (error) {
     console.error('处理拖拽文件夹时出错:', error);
-    showError('处理文件夹时发生错误');
+    showError(t('folderSelector.folderError'));
   }
 };
 
@@ -61,17 +65,17 @@ const openFolderDialog = async () => {
     
     if (folderPath) {
       emit('update:selectedFolder', folderPath);
-      showSuccess(`已选择文件夹: ${folderPath}`);
+      showSuccess(t('folderSelector.folderSelected', [folderPath]));
     }
   } catch (error) {
     console.error('选择文件夹失败:', error);
-    showError('选择文件夹时发生错误');
+    showError(t('folderSelector.selectError'));
   }
 };
 </script>
 
 <template>
-  <n-card title="步骤 2: 选择文件夹" class="step-card">
+  <n-card :title="t('folderSelector.stepTitle')" class="step-card">
     <div
       class="drop-area folder-drop"
       :class="{ 'dragging': isDragging }"
@@ -82,22 +86,19 @@ const openFolderDialog = async () => {
       ondragstart="return false;"
       ondrop="return false;"
     >
-      <div v-if="false">
+      <div>
         <n-icon size="48" class="icon">
           <folder-open-outline />
         </n-icon>
-        <n-gradient-text>拖拽文件夹到这里</n-gradient-text>
+        <n-gradient-text>{{ t('folderSelector.dragFolderTip') }}</n-gradient-text>
       </div>
-      <div v-else class="drop-area">
-        <n-gradient-text>选择要更换图标的文件夹</n-gradient-text>
-      </div>
-      <p v-if="selectedFolder">已选择: {{ selectedFolder }}</p>
+      <p v-if="selectedFolder">{{ t('common.selected') }}: {{ selectedFolder }}</p>
     </div>
     
     <div style="margin-top: 12px; text-align: center;">
-      <p>或者</p>
+      <p>{{ t('common.or') }}</p>
       <n-button @click="openFolderDialog" type="primary" ghost>
-        点击选择文件夹
+        {{ t('folderSelector.selectFolderBtn') }}
       </n-button>
     </div>
   </n-card>

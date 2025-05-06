@@ -9,11 +9,16 @@ import {
   NDialogProvider,
   NGradientText
 } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import IconSelector from './components/IconSelector/index.vue';
 import FolderSelector from './components/FolderSelector/index.vue';
 import IconApplier from './components/IconApplier/index.vue';
+import LanguageSelector from './components/LanguageSelector/index.vue';
 import { type IconItem } from './utils/iconLoader';
 import { showSuccess, showError } from './utils/messageManager';
+
+// 使用i18n国际化
+const { t } = useI18n();
 
 // 应用状态
 const selectedIcon = ref<string | null>(null);
@@ -25,7 +30,7 @@ const currentIconInfo = ref<IconItem | null>(null);
 // 当选择图标时
 const handleIconSelect = (icon: IconItem) => {
   currentIconInfo.value = icon;
-  showSuccess(`已选择图标: ${icon.name}`);
+  showSuccess(t('iconSelector.iconSelected', [icon.name]));
 };
 
 // 初始化应用
@@ -33,11 +38,11 @@ onMounted(() => {
   // 监听IPC消息 - 确保electron对象存在
   if (window.electron && window.electron.ipcRenderer) {
     window.electron.ipcRenderer.on('icon-applied', (_) => {
-      showSuccess('图标已成功应用');
+      showSuccess(t('iconApplier.applySuccess'));
     });
     
     window.electron.ipcRenderer.on('icon-apply-error', (_, errorMsg) => {
-      showError(`应用图标失败: ${errorMsg}`);
+      showError(t('iconApplier.applyError', [errorMsg]));
     });
   } else {
     console.warn('electron.ipcRenderer 不可用，可能在Web预览模式下运行');
@@ -49,13 +54,16 @@ onMounted(() => {
   <n-message-provider>
     <n-dialog-provider>
       <n-space vertical class="container">
+        <div class="header">
+          <n-gradient-text :size="24" type="info">{{ t('app.title') }}</n-gradient-text>
+          <LanguageSelector />
+        </div>
         <n-card>
-          <n-gradient-text :size="24" type="info">Mac 文件夹图标管理器</n-gradient-text>
           <n-divider />
           
           <!-- 管理员权限提示 -->
-          <n-alert type="warning" title="权限提示" style="margin-bottom: 16px">
-            修改文件夹图标需要管理员权限。如果遇到权限错误，请确保已安装fileicon (sudo npm install -g fileicon)，并使用 sudo 运行此应用。
+          <n-alert type="warning" :title="t('common.warning')" style="margin-bottom: 16px">
+            {{ t('app.permissionTip') }}
           </n-alert>
           
           <n-space vertical size="large">
@@ -66,8 +74,8 @@ onMounted(() => {
             />
             
             <!-- 文件夹选择区域 -->
-            <FolderSelector
-                v-model:selectedFolder="selectedFolder"
+            <FolderSelector 
+              v-model:selectedFolder="selectedFolder"
             />
             
             <!-- 应用按钮 -->
@@ -87,6 +95,13 @@ onMounted(() => {
   padding: 20px;
   max-width: 800px;
   margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
 .step-card {

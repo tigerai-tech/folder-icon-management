@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, defineEmits, defineProps } from 'vue';
 import { NTabs, NTabPane, NGrid, NGridItem, NImage, NScrollbar, NUploadDragger } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import { getAllIcons, type IconItem } from '../../utils/iconLoader';
 import { showSuccess, showError } from '../../utils/messageManager';
 
@@ -12,6 +13,9 @@ const emit = defineEmits<{
   (e: 'update:selectedIcon', value: string): void;
   (e: 'select', icon: IconItem): void;
 }>();
+
+// 使用i18n
+const { t } = useI18n();
 
 // 自定义图标
 const customIcons = ref<{ name: string; path: string; data: string }[]>([]);
@@ -40,7 +44,7 @@ const handleIconFile = (file: File) => {
   
   const allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
   if (!allowedTypes.includes(file.type)) {
-    showError('只支持 PNG, JPG 和 SVG 格式的图标');
+    showError(t('iconSelector.formatError'));
     return;
   }
   
@@ -52,16 +56,16 @@ const handleIconFile = (file: File) => {
       path: URL.createObjectURL(file),
       data
     });
-    showSuccess(`图标已添加: ${file.name}`);
+    showSuccess(t('iconSelector.iconAddedSuccess', [file.name]));
   };
   reader.readAsDataURL(file);
 };
 </script>
 
 <template>
-  <n-card title="步骤 1: 选择图标" class="step-card">
+  <n-card :title="t('iconSelector.stepTitle')" class="step-card">
     <n-tabs type="line">
-      <n-tab-pane name="default" tab="内置图标">
+      <n-tab-pane name="default" :tab="t('iconSelector.defaultIconTab')">
         <n-scrollbar style="max-height: 240px">
           <n-grid cols="4" x-gap="12" y-gap="12">
             <n-grid-item v-for="icon in builtinIcons" :key="icon.name" class="icon-item">
@@ -83,7 +87,7 @@ const handleIconFile = (file: File) => {
         </n-scrollbar>
       </n-tab-pane>
       
-      <n-tab-pane name="custom" tab="自定义图标">
+      <n-tab-pane name="custom" :tab="t('iconSelector.customIconTab')">
         <div
           class="drop-area"
           @drop="handleIconDrop"
@@ -92,8 +96,8 @@ const handleIconFile = (file: File) => {
         >
           <n-upload-dragger @change="handleIconFile">
             <div style="padding: 20px">
-              <n-gradient-text>拖拽上传图标或点击选择</n-gradient-text>
-              <p>支持 PNG, JPG 和 SVG 格式</p>
+              <n-gradient-text>{{ t('iconSelector.dragUploadTip') }}</n-gradient-text>
+              <p>{{ t('iconSelector.supportFormats') }}</p>
             </div>
           </n-upload-dragger>
         </div>
