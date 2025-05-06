@@ -21,13 +21,13 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@vicons/ionicons5": "^0.13.0",
     "ant-design-vue": "^3.2.0",
     "file-type": "^20.5.0",
     "fileicon": "^0.3.3",
-    "naive-ui": "^2.41.0",
     "vue-i18n": "^9.0.0"
   },
   "devDependencies": {

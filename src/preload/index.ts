@@ -38,6 +38,12 @@ const api = {
     return null
   },
   
+  // 获取文件真实路径
+  getFilePath: (file: File): string | null => {
+    // @ts-ignore - Electron在File上添加的特殊属性
+    return file.path || null
+  },
+  
   // 检查路径是否为文件夹
   checkPath: async (path: string): Promise<{exists: boolean, isDirectory: boolean, path: string}> => {
     console.log('preload: 检查路径:', path)
@@ -48,6 +54,12 @@ const api = {
   selectFolder: async (): Promise<string | null> => {
     console.log('preload: 打开选择文件夹对话框')
     return ipcRenderer.invoke('select-folder')
+  },
+  
+  // 打开选择图标文件对话框
+  selectIconFile: async (): Promise<string | null> => {
+    console.log('preload: 打开选择图标文件对话框')
+    return ipcRenderer.invoke('select-icon-file')
   }
 }
 

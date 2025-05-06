@@ -17,6 +17,7 @@ export default {
     defaultIconTab: 'Built-in Icons',
     customIconTab: 'Custom Icons',
     dragUploadTip: 'Drag and drop icon or click to select',
+    selectFileBtn: 'Browse Local Icons',
     supportFormats: 'Supports PNG, JPG, and SVG formats',
     iconAddedSuccess: 'Icon added: {0}',
     iconSelected: 'Icon selected: {0}',

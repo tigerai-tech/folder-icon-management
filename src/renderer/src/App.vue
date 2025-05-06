@@ -1,14 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import {
-  NCard,
-  NSpace,
-  NDivider,
-  NAlert,
-  NMessageProvider,
-  NDialogProvider,
-  NGradientText
-} from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import IconSelector from './components/IconSelector/index.vue';
 import FolderSelector from './components/FolderSelector/index.vue';
@@ -51,43 +42,43 @@ onMounted(() => {
 </script>
 
 <template>
-  <n-message-provider>
-    <n-dialog-provider>
-      <n-space vertical class="container">
-        <div class="header">
-          <n-gradient-text :size="24" type="info">{{ t('app.title') }}</n-gradient-text>
-          <LanguageSelector />
-        </div>
-        <n-card>
-          <n-divider />
-          
-          <!-- 管理员权限提示 -->
-          <n-alert type="warning" :title="t('common.warning')" style="margin-bottom: 16px">
-            {{ t('app.permissionTip') }}
-          </n-alert>
-          
-          <n-space vertical size="large">
-            <!-- 图标选择区域 -->
-            <IconSelector 
-              v-model:selectedIcon="selectedIcon"
-              @select="handleIconSelect"
-            />
-            
-            <!-- 文件夹选择区域 -->
-            <FolderSelector 
-              v-model:selectedFolder="selectedFolder"
-            />
-            
-            <!-- 应用按钮 -->
-            <IconApplier 
-              :selectedIcon="selectedIcon"
-              :selectedFolder="selectedFolder"
-            />
-          </n-space>
-        </n-card>
-      </n-space>
-    </n-dialog-provider>
-  </n-message-provider>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">{{ t('app.title') }}</h1>
+      <LanguageSelector />
+    </div>
+    <a-card>
+      <a-divider />
+      
+      <!-- 管理员权限提示 -->
+      <a-alert 
+        :message="t('common.warning')" 
+        :description="t('app.permissionTip')" 
+        type="warning" 
+        show-icon 
+        style="margin-bottom: 16px"
+      />
+      
+      <a-space direction="vertical" size="large" style="width: 100%">
+        <!-- 图标选择区域 -->
+        <IconSelector 
+          v-model:selectedIcon="selectedIcon"
+          @select="handleIconSelect"
+        />
+        
+        <!-- 文件夹选择区域 -->
+        <FolderSelector 
+          v-model:selectedFolder="selectedFolder"
+        />
+        
+        <!-- 应用按钮 -->
+        <IconApplier 
+          :selectedIcon="selectedIcon"
+          :selectedFolder="selectedFolder"
+        />
+      </a-space>
+    </a-card>
+  </div>
 </template>
 
 <style>
@@ -102,6 +93,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+}
+
+.title {
+  font-size: 24px;
+  background: linear-gradient(to right, #18a058, #36ad6a);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin: 0;
 }
 
 .step-card {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
-import { NButton, NSpace } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { applyIconToFolder } from '../../utils/folderIconManager';
 import { showSuccess, showError, showInfo } from '../../utils/messageManager';
@@ -44,18 +43,18 @@ const applyIcon = async () => {
 </script>
 
 <template>
-  <n-card :title="t('iconApplier.stepTitle')" class="step-card">
-    <n-space justify="center">
-      <n-button 
+  <a-card :title="t('iconApplier.stepTitle')" class="step-card">
+    <div style="text-align: center">
+      <a-button 
         type="primary" 
         @click="applyIcon" 
         :disabled="!selectedIcon || !selectedFolder"
         size="large"
       >
         {{ t('iconApplier.applyBtn') }}
-      </n-button>
-    </n-space>
-  </n-card>
+      </a-button>
+    </div>
+  </a-card>
 </template>
 
 <style scoped>

@@ -17,6 +17,7 @@ export default {
     defaultIconTab: '内置图标',
     customIconTab: '自定义图标',
     dragUploadTip: '拖拽上传图标或点击选择',
+    selectFileBtn: '浏览本地图标',
     supportFormats: '支持 PNG, JPG 和 SVG 格式',
     iconAddedSuccess: '图标已添加: {0}',
     iconSelected: '已选择图标: {0}',

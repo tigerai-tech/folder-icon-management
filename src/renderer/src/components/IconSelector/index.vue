@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, defineEmits, defineProps } from 'vue';
-import { NTabs, NTabPane, NGrid, NGridItem, NImage, NScrollbar, NUploadDragger } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { getAllIcons, type IconItem } from '../../utils/iconLoader';
 import { showSuccess, showError } from '../../utils/messageManager';
+import { createBase64ImageFromFilePath } from '../../utils/fileUtils';
 
 defineProps<{
   selectedIcon: string | null;
@@ -18,15 +18,17 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 // 自定义图标
-const customIcons = ref<{ name: string; path: string; data: string }[]>([]);
+const customIcons = ref<{ name: string; path: string; data: string; filePath?: string }[]>([]);
 
 // 获取所有内置图标
 const builtinIcons = getAllIcons();
 
 // 选择图标
-const selectIcon = (icon: { name: string; path: string }) => {
-  emit('update:selectedIcon', icon.path);
-  emit('select', icon);
+const selectIcon = (icon: { name: string; path: string; filePath?: string }) => {
+  // 如果存在真实文件路径，优先使用，否则使用URL路径
+  const finalPath = icon.filePath || icon.path;
+  emit('update:selectedIcon', finalPath);
+  emit('select', icon as IconItem);
 };
 
 // 处理图标拖拽上传
@@ -48,82 +50,127 @@ const handleIconFile = (file: File) => {
     return;
   }
   
+  // 获取真实文件路径
+  const filePath = window.api?.getFilePath?.(file);
+  
   const reader = new FileReader();
   reader.onload = (e) => {
     const data = e.target?.result as string;
     customIcons.value.push({
       name: file.name,
+      // 保存blob URL用于显示
       path: URL.createObjectURL(file),
-      data
+      data,
+      // 保存真实文件路径用于应用
+      filePath: filePath || undefined
     });
     showSuccess(t('iconSelector.iconAddedSuccess', [file.name]));
+    
+    console.log('文件路径:', filePath);
   };
   reader.readAsDataURL(file);
 };
+
+// 打开原生文件选择对话框
+const openIconFileDialog = async () => {
+  try {
+    const filePath = await window.api.selectIconFile();
+    if (filePath) {
+      // 获取文件名
+      const fileName = filePath.split('/').pop() || 'icon.png';
+      
+      // 创建数据URL用于显示
+      const dataUrl = await createBase64ImageFromFilePath(filePath);
+      
+      customIcons.value.push({
+        name: fileName,
+        path: dataUrl,
+        data: dataUrl,
+        filePath: filePath
+      });
+      
+      showSuccess(t('iconSelector.iconAddedSuccess', [fileName]));
+      console.log('选择的文件路径:', filePath);
+    }
+  } catch (error) {
+    console.error('选择图标文件失败:', error);
+    showError(t('iconSelector.selectError'));
+  }
+};
+
+// 处理文件输入变化
+const handleFileInputChange = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    handleIconFile(input.files[0]);
+  }
+};
+
+// 当前激活的选项卡
+const activeKey = ref('default');
 </script>
 
 <template>
-  <n-card :title="t('iconSelector.stepTitle')" class="step-card">
-    <n-tabs type="line">
-      <n-tab-pane name="default" :tab="t('iconSelector.defaultIconTab')">
-        <n-scrollbar style="max-height: 240px">
-          <n-grid cols="4" x-gap="12" y-gap="12">
-            <n-grid-item v-for="icon in builtinIcons" :key="icon.name" class="icon-item">
-              <div 
-                class="icon-wrapper" 
-                :class="{ 'selected': selectedIcon === icon.path }"
-                @click="selectIcon(icon)"
-              >
-                <n-image 
-                  :src="icon.path" 
-                  width="64" 
-                  preview-disabled
-                  object-fit="contain"
-                />
-                <div class="icon-name">{{ icon.name }}</div>
-              </div>
-            </n-grid-item>
-          </n-grid>
-        </n-scrollbar>
-      </n-tab-pane>
+  <a-card :title="t('iconSelector.stepTitle')" class="step-card">
+    <a-tabs v-model:activeKey="activeKey">
+      <a-tab-pane key="default" :tab="t('iconSelector.defaultIconTab')">
+        <a-row :gutter="[12, 12]" style="max-height: 240px; overflow-y: auto;">
+          <a-col :span="6" v-for="icon in builtinIcons" :key="icon.name" class="icon-item">
+            <div 
+              class="icon-wrapper" 
+              :class="{ 'selected': selectedIcon === icon.path }"
+              @click="selectIcon(icon)"
+            >
+              <img 
+                :src="icon.path" 
+                width="64" 
+                style="object-fit: contain;"
+              />
+              <div class="icon-name">{{ icon.name }}</div>
+            </div>
+          </a-col>
+        </a-row>
+      </a-tab-pane>
       
-      <n-tab-pane name="custom" :tab="t('iconSelector.customIconTab')">
+      <a-tab-pane key="custom" :tab="t('iconSelector.customIconTab')">
         <div
           class="drop-area"
           @drop="handleIconDrop"
           @dragover.prevent
           @dragenter.prevent
         >
-          <n-upload-dragger @change="handleIconFile">
-            <div style="padding: 20px">
-              <n-gradient-text>{{ t('iconSelector.dragUploadTip') }}</n-gradient-text>
-              <p>{{ t('iconSelector.supportFormats') }}</p>
-            </div>
-          </n-upload-dragger>
+          <div style="padding: 20px">
+            <p class="gradient-text">{{ t('iconSelector.dragUploadTip') }}</p>
+            <p>{{ t('iconSelector.supportFormats') }}</p>
+            
+            <a-button type="primary" ghost @click="openIconFileDialog">
+              {{ t('iconSelector.selectFileBtn') }}
+            </a-button>
+          </div>
         </div>
         
-        <n-scrollbar v-if="customIcons.length > 0" style="max-height: 240px; margin-top: 12px">
-          <n-grid cols="4" x-gap="12" y-gap="12">
-            <n-grid-item v-for="(icon, index) in customIcons" :key="index" class="icon-item">
+        <div v-if="customIcons.length > 0" style="max-height: 240px; overflow-y: auto; margin-top: 12px;">
+          <a-row :gutter="[12, 12]">
+            <a-col :span="6" v-for="(icon, index) in customIcons" :key="index" class="icon-item">
               <div 
                 class="icon-wrapper" 
-                :class="{ 'selected': selectedIcon === icon.path }"
+                :class="{ 'selected': selectedIcon === (icon.filePath || icon.path) }"
                 @click="selectIcon(icon)"
               >
-                <n-image 
+                <img 
                   :src="icon.path" 
                   width="64" 
-                  preview-disabled
-                  object-fit="contain"
+                  style="object-fit: contain;"
                 />
                 <div class="icon-name">{{ icon.name }}</div>
+                <div v-if="icon.filePath" class="file-path">{{ icon.filePath }}</div>
               </div>
-            </n-grid-item>
-          </n-grid>
-        </n-scrollbar>
-      </n-tab-pane>
-    </n-tabs>
-  </n-card>
+            </a-col>
+          </a-row>
+        </div>
+      </a-tab-pane>
+    </a-tabs>
+  </a-card>
 </template>
 
 <style scoped>
@@ -161,6 +208,15 @@ const handleIconFile = (file: File) => {
   white-space: nowrap;
 }
 
+.file-path {
+  font-size: 9px;
+  color: #888;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .drop-area {
   border: 2px dashed #ccc;
   border-radius: 8px;
@@ -174,4 +230,17 @@ const handleIconFile = (file: File) => {
   border-color: #18a058;
   background-color: rgba(24, 160, 88, 0.1);
 }
-</style> 
+
+.custom-file-input {
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 15px;
+}
+
+.gradient-text {
+  background-image: linear-gradient(to right, #18a058, #36ad6a);
+  -webkit-background-clip: text;
+  color: transparent;
+  font-weight: bold;
+}
+</style>

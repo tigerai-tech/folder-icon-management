@@ -14,6 +14,8 @@ interface Window {
     getDraggedFolderPath: (event: DragEvent) => string | null
     checkPath: (path: string) => Promise<{exists: boolean, isDirectory: boolean, path: string}>
     selectFolder: () => Promise<string | null>
+    getFilePath: (file: File) => string | null
+    selectIconFile: () => Promise<string | null>
   }
 }
 

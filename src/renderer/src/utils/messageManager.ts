@@ -1,31 +1,15 @@
-import { createDiscreteApi } from 'naive-ui';
-import type { MessageApi } from 'naive-ui';
+import { message } from 'ant-design-vue';
 import { i18n } from './i18n';
 
 // 获取i18n实例的t函数
 const t = i18n.global.t;
-
-// 单例消息实例
-let messageInstance: MessageApi | null = null;
-
-/**
- * 获取消息API实例
- * @returns 消息API实例
- */
-export const getMessage = (): MessageApi => {
-  if (!messageInstance) {
-    const { message } = createDiscreteApi(['message']);
-    messageInstance = message;
-  }
-  return messageInstance;
-};
 
 /**
  * 显示成功消息
  * @param content 消息内容
  */
 export const showSuccess = (content: string): void => {
-  getMessage().success(content);
+  message.success(content);
 };
 
 /**
@@ -33,7 +17,7 @@ export const showSuccess = (content: string): void => {
  * @param content 消息内容
  */
 export const showError = (content: string): void => {
-  getMessage().error(content);
+  message.error(content);
 };
 
 /**
@@ -41,7 +25,7 @@ export const showError = (content: string): void => {
  * @param content 消息内容
  */
 export const showInfo = (content: string): void => {
-  getMessage().info(content);
+  message.info(content);
 };
 
 /**
@@ -49,5 +33,5 @@ export const showInfo = (content: string): void => {
  * @param content 消息内容
  */
 export const showWarning = (content: string): void => {
-  getMessage().warning(content);
+  message.warning(content);
 }; 

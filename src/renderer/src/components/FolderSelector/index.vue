@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, defineProps, defineEmits } from 'vue';
-import { NIcon, NGradientText, NButton } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
-import { FolderOpenOutline } from '@vicons/ionicons5';
+import { FolderOutlined } from '@ant-design/icons-vue';
 import { selectFolder, handleFolderDrop as processFolderDrop } from '../../utils/folderIconManager';
 import { showSuccess, showError } from '../../utils/messageManager';
 
@@ -19,6 +18,9 @@ const { t } = useI18n();
 // 拖拽状态
 const isDragging = ref(false);
 
+// 已选择的文件夹列表
+const selectedFolders = ref<{ name: string; path: string }[]>([]);
+
 // 处理文件夹拖拽
 const handleFolderDrop = async (e: DragEvent) => {
   e.preventDefault();
@@ -29,6 +31,16 @@ const handleFolderDrop = async (e: DragEvent) => {
     const folderPath = await processFolderDrop(e);
     
     if (folderPath) {
+      // 获取文件夹名
+      const folderName = folderPath.split('/').pop() || 'folder';
+      
+      // 将文件夹添加到列表中
+      selectedFolders.value.push({
+        name: folderName,
+        path: folderPath
+      });
+      
+      // 发出选择事件
       emit('update:selectedFolder', folderPath);
       showSuccess(t('folderSelector.folderSelected', [folderPath]));
     } else {
@@ -64,6 +76,16 @@ const openFolderDialog = async () => {
     const folderPath = await selectFolder();
     
     if (folderPath) {
+      // 获取文件夹名
+      const folderName = folderPath.split('/').pop() || 'folder';
+      
+      // 将文件夹添加到列表中
+      selectedFolders.value.push({
+        name: folderName,
+        path: folderPath
+      });
+      
+      // 发出选择事件
       emit('update:selectedFolder', folderPath);
       showSuccess(t('folderSelector.folderSelected', [folderPath]));
     }
@@ -72,10 +94,15 @@ const openFolderDialog = async () => {
     showError(t('folderSelector.selectError'));
   }
 };
+
+// 选择文件夹
+const selectFolderFromList = (folder: { name: string; path: string }) => {
+  emit('update:selectedFolder', folder.path);
+};
 </script>
 
 <template>
-  <n-card :title="t('folderSelector.stepTitle')" class="step-card">
+  <a-card :title="t('folderSelector.stepTitle')" class="step-card">
     <div
       class="drop-area folder-drop"
       :class="{ 'dragging': isDragging }"
@@ -86,22 +113,34 @@ const openFolderDialog = async () => {
       ondragstart="return false;"
       ondrop="return false;"
     >
-      <div>
-        <n-icon size="48" class="icon">
-          <folder-open-outline />
-        </n-icon>
-        <n-gradient-text>{{ t('folderSelector.dragFolderTip') }}</n-gradient-text>
+      <div style="padding: 20px">
+        <folder-outlined class="icon" style="font-size: 48px; margin-bottom: 12px;" />
+        <p class="gradient-text">{{ t('folderSelector.dragFolderTip') }}</p>
+        
+        <a-button type="primary" ghost @click="openFolderDialog" style="margin-top: 12px;">
+          {{ t('folderSelector.selectFolderBtn') }}
+        </a-button>
       </div>
-      <p v-if="selectedFolder">{{ t('common.selected') }}: {{ selectedFolder }}</p>
     </div>
     
-    <div style="margin-top: 12px; text-align: center;">
-      <p>{{ t('common.or') }}</p>
-      <n-button @click="openFolderDialog" type="primary" ghost>
-        {{ t('folderSelector.selectFolderBtn') }}
-      </n-button>
+    <div v-if="selectedFolders.length > 0" style="max-height: 240px; overflow-y: auto; margin-top: 12px;">
+      <a-row :gutter="[12, 12]">
+        <a-col :span="24" v-for="(folder, index) in selectedFolders" :key="index" class="folder-item">
+          <div 
+            class="folder-wrapper" 
+            :class="{ 'selected': selectedFolder === folder.path }"
+            @click="selectFolderFromList(folder)"
+          >
+            <folder-outlined class="folder-icon" />
+            <div class="folder-info">
+              <div class="folder-name">{{ folder.name }}</div>
+              <div class="folder-path">{{ folder.path }}</div>
+            </div>
+          </div>
+        </a-col>
+      </a-row>
     </div>
-  </n-card>
+  </a-card>
 </template>
 
 <style scoped>
@@ -126,11 +165,74 @@ const openFolderDialog = async () => {
 }
 
 .folder-drop {
-  padding: 30px;
+  padding: 20px;
 }
 
 .icon {
   font-size: 48px;
   margin-bottom: 12px;
+  color: #18a058;
+}
+
+.gradient-text {
+  background-image: linear-gradient(to right, #18a058, #36ad6a);
+  -webkit-background-clip: text;
+  color: transparent;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.folder-item {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.folder-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.folder-wrapper:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.folder-wrapper.selected {
+  background-color: rgba(24, 160, 88, 0.1);
+  border: 2px solid #18a058;
+}
+
+.folder-icon {
+  font-size: 24px;
+  color: #18a058;
+  margin-right: 12px;
+}
+
+.folder-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  flex: 1;
+}
+
+.folder-name {
+  font-size: 14px;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-path {
+  font-size: 12px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style> 

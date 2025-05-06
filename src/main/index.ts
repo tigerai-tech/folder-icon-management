@@ -85,6 +85,28 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return null
   })
 
+  // 处理选择图标文件对话框
+  ipcMain.handle('select-icon-file', async () => {
+    console.log('主进程: 打开选择图标文件对话框')
+    
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: '图片文件', extensions: ['png', 'jpg', 'jpeg', 'svg'] }
+      ],
+      title: '选择图标文件'
+    })
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0]
+      console.log('主进程: 用户选择了图标文件:', filePath)
+      return filePath
+    }
+    
+    console.log('主进程: 用户取消了选择')
+    return null
+  })
+
   // 处理拖拽文件
   ipcMain.handle('check-path', async (_, path) => {
     console.log('主进程: 检查路径:', path)
@@ -124,8 +146,9 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
         if (!stats.isDirectory()) {
           throw new Error('所选路径不是有效的文件夹')
         }
-        
+
         console.log(`正在处理文件夹: ${folderPath}`)
+        console.log(`正在使用ICON: ${iconPath}`)
       } catch (error: any) {
         console.error(`检查文件夹错误: ${error.message}`)
         if (error.code === 'ENOENT') {
@@ -183,6 +206,37 @@ function setupIpcHandlers(mainWindow: BrowserWindow): void {
       console.error('应用图标失败:', error)
       mainWindow.webContents.send('icon-apply-error', error.message)
       throw error
+    }
+  })
+
+  // 处理读取文件并转为base64的请求
+  ipcMain.handle('read-file', async (_, filePath) => {
+    console.log('主进程: 读取文件:', filePath)
+    
+    try {
+      // 读取文件为Buffer
+      const data = await fs.readFile(filePath)
+      
+      // 获取文件类型
+      const ext = filePath.split('.').pop()?.toLowerCase() || 'png'
+      let mimeType = 'image/png'
+      
+      // 设置正确的MIME类型
+      if (ext === 'jpg' || ext === 'jpeg') {
+        mimeType = 'image/jpeg'
+      } else if (ext === 'svg') {
+        mimeType = 'image/svg+xml'
+      }
+      
+      // 转换为base64并返回数据URL
+      const base64Data = data.toString('base64')
+      const dataUrl = `data:${mimeType};base64,${base64Data}`
+      
+      console.log('主进程: 文件读取成功')
+      return { success: true, data: dataUrl }
+    } catch (error: any) {
+      console.error('读取文件失败:', error)
+      return { success: false, error: error.message }
     }
   })
 }

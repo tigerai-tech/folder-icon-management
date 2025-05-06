@@ -1,0 +1,23 @@
+import { promises as fs } from 'fs';
+
+/**
+ * 从文件路径创建Base64图像数据URL
+ * @param filePath 文件路径
+ * @returns Promise<string> 返回base64编码的数据URL
+ */
+export const createBase64ImageFromFilePath = async (filePath: string): Promise<string> => {
+  try {
+    // 使用node的fs模块直接读取文件
+    // 注意：这在渲染进程中可能不适用，因为安全限制
+    // 替代方案是通过IPC请求主进程读取文件
+
+    // 通过Electron的IPC获取文件内容
+    const response = await window.electron.ipcRenderer.invoke('read-file', filePath);
+    return response.data;
+  } catch (error) {
+    console.error('读取文件失败:', error);
+    
+    // 出现错误时返回一个占位图像
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFyElEQVR4nO2dW4hcRRCGq3ZNNOtTiJqIKIjxAREv8YKuUYLrI6ugeEOMeMMIeomJWUOIUSQas5poVBAviKCCl4caRRTxhhFEUPCCQUTxFpVEjVGz6srULrPs7Oz0OTM93dP1wc/CO9PndNU/p0+drjMeM8YYY4wxxhhjTJGJiQkHyK8AZwI3AIuAtcDHwG7gL+Aw0PJqD9HG3UQbP0LbHwReBO4EZgOzssf7OxKVlQdMAW4GXgf+pXkOAOuAC/5rWxSa8N0CPEL5+B1YDVxZLuILTYdlTgXOAR6m/LwLzG8c8dpZpx14DKiVKyIVvwKLGkE8cCnwQ8Ui0uowsLwexF8AfG7RJqgDPKf7Tfbif9aWyYG+Bl7KXvyLFps7LxO5+CdNvVmTCfFz3YQJhYmQejAREg8mQuLBREg8mAiJBxMh8WAiJB5MhMSDBZKHKe4GURANGp0SIXWAhwgHBWUcaHxHVIREgP4RK8tOiYAI0C/Cn5SdkggZe9TjQeZKIiQGZPGTrHKQJUciJAI0lHgNTXUKIiQKNB17w7hTIqBfRMoFGAEQ0S9iKCZCTCjEhxnXYSIMiJD1UwcZZMslBmMYtEEbkiGhv8SScaaEQJuhDcmQZEnEcGhDciALIUOv7uVUyJdkSgdtwTYYQ0Ij89eVLz5kYqc5NyQo13zBSSHfks3Vx1uzJEOCLmw8LtdO9lJcw1/9lmwN5xYROidPzrMy4gGOQX+CxnhFN1cJJQaFnDC+lGAih2NnR0i2cYwA1rLbVoO5kghJ//oFPDPOMlLkRNQQQZCLRtLG0SQlBIeGHO8HvvNf0h9yXVYo3srF/WTYGDacW8MEVy5+RxFiKEZXRIRYWqEbJkLiwURIPJgIiQcTIfFgIiQeTITEg4mQePA9l1AYYPGApdXjgQRKoGTRaCJRfPHHgZ1ynQF3uepxRCkODgxYI/UksEdKClQglXsT8KZcoiClbKUUHPBSPNaSv4rWjfKWXPQDLgaucRW5KL+WGaAVCqBvfbHkK1WxNR2zpTidXJp+BFCjD0BbC9PUDSvFDv5NG0OA5SkLrZTCFCQfnfh4m6ygHtFYVqWfLlWUAXLT4cXQ554GbPD+YeEoXc8QJyH+Ffbpk0GGqb1fYqWUc0bIORl8WbU/7pNlwFJXMcuQ/Y0uH/Hxbq4W92/jTbQ6DH53Xz5CAvDNhHHmJk3BnQ/cq4uAVSJDjn6+YXoAW+XykHx8J2zI7wcFnXP1eAq4R5bI0X2lKvh/Cb3C1QzghTCerXRTjJ4LPD1xYgZ7Bl4W6LTDYDDyOUVm7nU576O+9iLy+V5zZrpLOL1a2Qh5vWfRFwUn99zkQsA5wEWyHQ5wLnBSv4/R/TcDK72/+r0TeCo6QuQ1IXBHPbp3JrAlnJPJbcj6+mVsUPxwubxuWu+fsgcLWYrsBDak+JGGYCLwGLC+KCLSfqnEt9sJdAD4JsTtrr3gW1eJXTleDdE+Uo88VfxoYkb+GKK2+2EZBb1Mw/ZNwDZZbE6Jd+i8QwPu3qT78ztA+L0tRoRMZSIkHkyExIOJkHgwERIPJkLiwURIPJgIiQcTIfFgIiQeTITEg/YbZIe2aYcdWQwTId0RSxEhFcJESDyYCIkHEyHxYCLE2IKQqrMGeMZESHXZGO7XXGsiJPMhSMm6o8AWEyHV5rHwzOMzJkKqyxZgm6zQBnaYCKkmb8gziOHZx+0mQionYB+wPDzzeNVESLXpWAkTIdVmvYmQePC3Zz2bCKkuu8KNWPeZCKkue8PzYM+ZCKkue8Nzbz+ZCKkoe8L7P3hEhLxYtc4oAJ+EeyHbRIistJZnsBkJ4fA84BURstU/iMEQ3wxMBz4aOx1izKgxEWLCRJgIMaEwEWJCYSLEhMJEiAmFiRADMMZEiH2mMXliIsQYY4wxxhhjjDHGGGOMMcYYY4wxxhhTTP4DJXlbktS3gYQAAAAASUVORK5CYII=';
+  }
+}; 
