@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, inject } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import {
   NCard,
   NSpace,
   NTabs,
   NTabPane,
-  NUpload,
   NUploadDragger,
   NGradientText,
   NButton,
@@ -21,8 +20,7 @@ import {
   NIcon
 } from 'naive-ui'
 import { FolderOpenOutline } from '@vicons/ionicons5'
-import { h } from 'vue'
-
+import icon from '@public/icons/folder13~iphone.png'
 // 创建状态管理
 const selectedIcon = ref<string | null>(null)
 const selectedFolder = ref<string | null>(null)
@@ -30,7 +28,7 @@ const customIcons = ref<{ name: string; path: string; data: string }[]>([])
 const defaultIcons = reactive([
   { 
     name: '默认蓝色', 
-    path: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cGF0aCBmaWxsPSIjNDI5OWUxIiBkPSJNMTAgNEg0Yy0xLjEgMC0xLjk5LjktMS45OSAyTDIgMThjMCAxLjEuOSAyIDIgMmgxNmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+Cjwvc3ZnPg==' 
+    path: icon
   },
   { 
     name: '红色', 
@@ -96,7 +94,7 @@ const handleFolderDrop = (e: DragEvent) => {
     // 使用API中的方法作为备用
     const path = window.api.getDraggedFolderPath(e)
     console.log('API返回的路径:', path)
-    
+
     if (path) {
       selectedFolder.value = path
       message?.success(`已选择文件夹: ${selectedFolder.value}`)
@@ -171,9 +169,10 @@ const applyIconToFolder = async () => {
   
   try {
     message?.info('正在应用图标，请稍候...')
-    
+
     // 使用API
-    await window.api.applyIconToFolder(selectedFolder.value, selectedIcon.value)
+    const cleanedPath = selectedIcon.value.replace('/@fs', '');
+    await window.api.applyIconToFolder(selectedFolder.value, cleanedPath)
     message?.success('图标已成功应用到文件夹')
   } catch (error) {
     console.error('应用图标失败:', error)

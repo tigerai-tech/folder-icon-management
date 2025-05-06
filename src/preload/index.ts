@@ -11,29 +11,29 @@ const api = {
   // 增加解析拖拽文件的方法
   getDraggedFolderPath: (event: DragEvent): string | null => {
     console.log('preload: getDraggedFolderPath 被调用')
-    
+
     if (!event) {
       console.log('preload: 事件对象为空')
       return null
     }
-    
+    console.log(event)
     if (!event.dataTransfer) {
       console.log('preload: 事件中无dataTransfer对象')
       return null
     }
-    
+
     if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
       console.log('preload: 拖拽的文件数量:', event.dataTransfer.files.length)
-      
+      console.log(event.dataTransfer)
       const file = event.dataTransfer.files[0]
       console.log('preload: 拖拽的第一个文件类型:', file.type)
-      
+
       // @ts-ignore - Electron在files上添加的特殊属性
       const path = file.path
       console.log('preload: 解析到的路径:', path)
       return path
     }
-    
+
     console.log('preload: 未找到有效文件')
     return null
   },
