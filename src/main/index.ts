@@ -22,9 +22,22 @@ function createWindow(): void {
       sandbox: false,
       nodeIntegration: true,
       contextIsolation: true,
-      webSecurity: false // 允许加载本地资源
+      webSecurity: true, // 开启网页安全
+      allowRunningInsecureContent: false // 不允许运行不安全的内容
     }
   })
+
+  // 设置CSP
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: file:;"
+        ]
+      }
+    });
+  });
 
   // 打开调试工具以查看console.log输出
   mainWindow.webContents.openDevTools()
