@@ -1,0 +1,80 @@
+@import './base.css';
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  padding: 0;
+  margin: 0;
+  background-color: #f2f3f5;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.step-card {
+  margin-bottom: 16px;
+}
+
+.drop-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.drop-area:hover {
+  border-color: #18a058;
+  background-color: rgba(24, 160, 88, 0.1);
+}
+
+.folder-drop {
+  padding: 30px;
+}
+
+.icon-item {
+  display: flex;
+  justify-content: center;
+}
+
+.icon-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-wrapper:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.icon-wrapper.selected {
+  background-color: rgba(24, 160, 88, 0.1);
+  border: 2px solid #18a058;
+}
+
+.icon-name {
+  margin-top: 8px;
+  font-size: 12px;
+  text-align: center;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
