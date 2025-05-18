@@ -1,11 +1,13 @@
 # Mac Folder Icon Manager (Mac文件夹图标管理器)
 
-
+![](./docs/post.png)
+  
 A simple yet practical Mac folder icon management application that allows you to easily change folder icons.   
 一个简单而实用的Mac文件夹图标管理应用程序，让您可以轻松地更改文件夹的图标。
 
 
 ## Features (功能)
+![](./docs/Effect-Display.png)
 
 ### Change Icon (换图标)
 
