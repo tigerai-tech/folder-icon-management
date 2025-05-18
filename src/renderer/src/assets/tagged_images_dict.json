@@ -15666,5 +15666,85 @@
         "application",
         "glossy",
         "rounded"
+    ],
+    "workspace.png": [
+        "gray",
+        "red",
+        "mouse",
+        "application",
+        "workspace",
+        "smooth",
+        "rounded"
+    ],
+    "dcim.png": [
+        "black",
+        "camera",
+        "image",
+        "application",
+        "glossy",
+        "rounded"
+    ],
+    "book.png": [
+        "book",
+        "blue",
+        "brown",
+        "document",
+        "application",
+        "glossy",
+        "rounded"
+    ],
+    "download.png": [
+        "download",
+        "blue",
+        "smooth",
+        "rounded",
+        "document",
+        "application"
+    ],
+    "books.png": [
+        "books",
+        "brown",
+        "white",
+        "bookshelf",
+        "library",
+        "document",
+        "audiobook",
+        "glossy",
+        "rounded"
+    ],
+    "audio-book-icon.png": [
+        "audiobooks",
+        "teal",
+        "navy",
+        "headphones",
+        "audiobook",
+        "music",
+        "rounded",
+        "smooth"
+    ],
+    "documents.png": [
+        "blue",
+        "document",
+        "application",
+        "smooth",
+        "sharprect"
+    ],
+    "windows-8.png": [
+        "windows",
+        "gray",
+        "application",
+        "workspace",
+        "smooth",
+        "rounded",
+        "data"
+    ],
+    "red_black_music.png": [
+        "red",
+        "yellow",
+        "headphones",
+        "music",
+        "audiobook",
+        "glossy",
+        "rounded"
     ]
 }

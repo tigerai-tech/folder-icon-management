@@ -8,6 +8,12 @@ const api = {
     return ipcRenderer.invoke('apply-icon', { folderPath, iconPath })
   },
   
+  // Reset folder icon
+  resetFolderIcon: (options: {folderPath: string, deleteFile: boolean}): Promise<any> => {
+    console.log('preload: resetFolderIcon 被调用', options)
+    return ipcRenderer.invoke('reset-icon', options)
+  },
+  
   // 增加解析拖拽文件的方法
   getDraggedFolderPath: (event: DragEvent): string | null => {
     console.log('preload: getDraggedFolderPath 被调用')

@@ -1,3 +1,5 @@
+import { ref } from 'vue';
+import taggedImagesDict from '../assets/tagged_images_dict.json';
 /**
  * 图标加载器工具
  * 用于动态加载icons目录下的所有图标
@@ -8,7 +10,28 @@ interface IconItem {
   path: string;
   keywords: string[]; // 关键词列表，用于搜索
   originalFileName: string; // 原始文件名，不含扩展名
+  tags?: string[]; // 从AI标注数据中获取的标签
+  isCustom?: boolean; // 是否为用户自定义图标
 }
+
+// 缓存已加载的图标
+const iconCache = ref<IconItem[]>([]);
+// 缓存用户自定义图标
+const customIconCache = ref<IconItem[]>([]);
+
+/**
+ * 向主进程发送IPC请求获取数据
+ * @param channel IPC通道名
+ * @param args 可选参数
+ * @returns 返回结果Promise
+ */
+const ipcInvoke = async <T>(channel: string, data?: any): Promise<T> => {
+  if (!window.electron?.ipcRenderer) {
+    console.error('IPC渲染器未初始化');
+    return Promise.reject('IPC渲染器未初始化');
+  }
+  return window.electron.ipcRenderer.invoke(channel, data);
+};
 
 // 从文件名提取关键词
 const extractKeywords = (fileName: string): string[] => {
@@ -73,6 +96,19 @@ const extractKeywords = (fileName: string): string[] => {
   return [...new Set(keywords)];
 };
 
+// 获取图标标签数据
+const getIconTags = (fileName: string): string[] => {
+  // 将文件名转换为与JSON文件中的键匹配的格式
+  const tagKey = fileName.trim();
+  
+  // 从标签字典中获取标签数组
+  if (taggedImagesDict && taggedImagesDict[tagKey]) {
+    return taggedImagesDict[tagKey] as string[];
+  }
+  
+  return [];
+};
+
 // 格式化显示名称
 const formatDisplayName = (fileName: string): string => {
   // 移除文件扩展名
@@ -93,6 +129,11 @@ const formatDisplayName = (fileName: string): string => {
 
 // 获取所有的内置图标
 const loadBuiltinIcons = (): IconItem[] => {
+  // 如果缓存中有图标，直接返回
+  if (iconCache.value.length > 0) {
+    return iconCache.value;
+  }
+
   const icons: IconItem[] = [];
   
   try {
@@ -123,6 +164,12 @@ const loadBuiltinIcons = (): IconItem[] => {
       // 提取关键词
       const keywords = extractKeywords(fileName);
       
+      // 获取AI标注的标签
+      const tags = getIconTags(fileName);
+      
+      // 合并关键词和标签，确保唯一性
+      const mergedKeywords = [...new Set([...keywords, ...tags])];
+      
       // 格式化显示名称
       const displayName = formatDisplayName(fileName);
       
@@ -135,8 +182,10 @@ const loadBuiltinIcons = (): IconItem[] => {
         name: displayName,
         // @ts-ignore - 模块类型
         path: imagePath,
-        keywords: keywords,
-        originalFileName: nameWithoutExt
+        keywords: mergedKeywords,
+        originalFileName: nameWithoutExt,
+        tags: tags,
+        isCustom: false
       });
     });
     
@@ -147,9 +196,13 @@ const loadBuiltinIcons = (): IconItem[] => {
       console.log('第一个图标信息:', {
         name: icons[0].name,
         path: icons[0].path,
-        originalFileName: icons[0].originalFileName
+        originalFileName: icons[0].originalFileName,
+        tags: icons[0].tags
       });
     }
+    
+    // 更新缓存
+    iconCache.value = icons;
   } catch (error) {
     console.error('加载内置图标失败:', error);
   }
@@ -158,13 +211,76 @@ const loadBuiltinIcons = (): IconItem[] => {
 };
 
 /**
- * 获取所有可用图标
- * @returns 包含所有内置图标和SVG图标的数组
+ * 加载用户自定义图标
+ * 从工作目录/source-icons加载用户添加的图标
  */
-export const getAllIcons = (): IconItem[] => {
+const loadCustomIcons = async (): Promise<IconItem[]> => {
+  // 如果缓存中有自定义图标，直接返回
+  if (customIconCache.value.length > 0) {
+    return customIconCache.value;
+  }
+
+  const icons: IconItem[] = [];
+  
+  try {
+    // 通过IPC获取用户自定义图标
+    const customIcons = await ipcInvoke<Array<{ fileName: string, filePath: string }>>('load-custom-icons');
+    
+    if (customIcons && Array.isArray(customIcons)) {
+      console.log('找到用户自定义图标:', customIcons.length);
+      
+      customIcons.forEach((icon: { fileName: string, filePath: string }) => {
+        const { fileName, filePath } = icon;
+        
+        // 提取关键词 (只基于文件名，不使用标签)
+        const keywords = extractKeywords(fileName);
+        
+        // 格式化显示名称
+        const displayName = formatDisplayName(fileName);
+        
+        // 移除文件扩展名
+        const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+        
+        // 添加到图标列表
+        icons.push({
+          name: displayName,
+          path: filePath, // 这里使用文件的绝对路径
+          keywords: keywords,
+          originalFileName: nameWithoutExt,
+          isCustom: true // 标记为自定义图标
+        });
+      });
+      
+      console.log('成功加载用户自定义图标数量:', icons.length);
+      
+      // 更新缓存
+      customIconCache.value = icons;
+    }
+  } catch (error) {
+    console.error('加载用户自定义图标失败:', error);
+  }
+  
+  return icons;
+};
+
+/**
+ * 刷新自定义图标缓存
+ * 用于在添加新图标后刷新列表
+ */
+export const refreshCustomIcons = (): void => {
+  customIconCache.value = [];
+};
+
+/**
+ * 获取所有可用图标
+ * @returns 包含所有内置图标和自定义图标的数组
+ */
+export const getAllIcons = async (): Promise<IconItem[]> => {
   const builtInIcons = loadBuiltinIcons();
-  console.log(`获取图标: 内置图标 ${builtInIcons.length}个`);
-  return [...builtInIcons];
+  const customIcons = await loadCustomIcons();
+  
+  console.log(`获取图标: 内置图标 ${builtInIcons.length}个, 自定义图标 ${customIcons.length}个`);
+  return [...builtInIcons, ...customIcons];
 };
 
 /**
@@ -172,8 +288,8 @@ export const getAllIcons = (): IconItem[] => {
  * @param name 图标名称
  * @returns 图标信息，如果未找到则返回undefined
  */
-export const getIconByName = (name: string): IconItem | undefined => {
-  const allIcons = getAllIcons();
+export const getIconByName = async (name: string): Promise<IconItem | undefined> => {
+  const allIcons = await getAllIcons();
   return allIcons.find(icon => icon.name.toLowerCase() === name.toLowerCase());
 };
 
@@ -182,20 +298,52 @@ export const getIconByName = (name: string): IconItem | undefined => {
  * @param keyword 搜索关键词
  * @returns 匹配的图标数组
  */
-export const searchIcons = (keyword: string): IconItem[] => {
+export const searchIcons = async (keyword: string): Promise<IconItem[]> => {
   if (!keyword) {
-    return getAllIcons();
+    return await getAllIcons();
   }
   
-  const allIcons = getAllIcons();
+  const allIcons = await getAllIcons();
   const searchTerms = keyword.toLowerCase().split(/\s+/);
   
   return allIcons.filter(icon => {
-    // 检查每个搜索词是否匹配任何关键词
-    return searchTerms.some(term => 
-      icon.keywords.some(keyword => keyword.includes(term)) ||
+    // 检查每个搜索词是否匹配任何关键词或标签
+    return searchTerms.some(term => {
+      // 优先精确匹配标签
+      if (!icon.isCustom && icon.tags) {
+        // 检查是否有完全匹配的标签
+        if (icon.tags.some(tag => tag.toLowerCase() === term)) {
+          return true;
+        }
+      }
+      
+      // 检查关键词匹配
+      return icon.keywords.some(keyword => keyword.includes(term)) || 
       icon.name.toLowerCase().includes(term) ||
-      icon.originalFileName.toLowerCase().includes(term)
+      icon.originalFileName.toLowerCase().includes(term) ||
+        // 检查标签部分匹配 (仅适用于内置图标)
+        (!icon.isCustom && icon.tags && icon.tags.some(tag => tag.toLowerCase().includes(term)));
+    });
+  });
+};
+
+/**
+ * 根据标签搜索图标
+ * @param tags 要搜索的标签数组
+ * @returns 匹配的图标数组
+ */
+export const searchIconsByTags = async (tags: string[]): Promise<IconItem[]> => {
+  if (!tags || tags.length === 0) {
+    return await getAllIcons();
+  }
+  
+  const allIcons = await getAllIcons();
+  const searchTags = tags.map(tag => tag.toLowerCase());
+  
+  return allIcons.filter(icon => {
+    // 检查图标是否包含任何搜索标签 (仅适用于内置图标)
+    return !icon.isCustom && icon.tags && icon.tags.some(iconTag => 
+      searchTags.some(searchTag => iconTag.toLowerCase() === searchTag)
     );
   });
 };

@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ref, defineEmits, defineProps, computed, watch } from 'vue';
+import { ref, defineEmits, defineProps, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getAllIcons, searchIcons, type IconItem } from '../../utils/iconLoader';
+import { getAllIcons, searchIcons, searchIconsByTags, refreshCustomIcons, type IconItem } from '../../utils/iconLoader';
 import { showSuccess, showError } from '../../utils/messageManager';
-import { CloseOutlined } from '@ant-design/icons-vue';
+import { CloseOutlined, TagOutlined } from '@ant-design/icons-vue';
+import { openIconFileDialog, setupCustomIcons, setupI18n } from './openIconFileDialog';
+
+// Import the IPC helper utilities that have proper type definitions
+import * as ipcHelper from '../../utils/ipcHelper';
 
 defineProps<{
   selectedIcon: string | null;
@@ -29,23 +33,122 @@ const iconUrl = ref('');
 // 是否已经选中图标（用于过滤状态）
 const isIconSelected = ref(false);
 
-// 获取所有内置图标的原始列表
-const allBuiltinIcons = getAllIcons();
+// 获取所有内置图标的列表
+const builtinIcons = ref<IconItem[]>([]);
+const loading = ref(true);
 
-// 使用增强的搜索函数过滤图标
-const filteredBuiltinIcons = computed(() => {
-  if (!searchKeyword.value) {
-    return allBuiltinIcons;
+// 加载图标数据
+const loadIcons = async () => {
+  loading.value = true;
+  try {
+    builtinIcons.value = await getAllIcons();
+  } catch (error) {
+    console.error('加载图标失败:', error);
+    showError(t('iconSelector.loadFailed'));
+  } finally {
+    loading.value = false;
   }
-  
-  return searchIcons(searchKeyword.value);
+};
+
+// 组件挂载时加载图标
+onMounted(() => {
+  loadIcons();
+  // Initialize customIcons reference for the openIconFileDialog utility
+  setupCustomIcons(customIcons);
+  // Initialize i18n translation function
+  setupI18n(t);
 });
+
+// 刷新图标列表
+const refreshIcons = async () => {
+  refreshCustomIcons(); // 清除自定义图标缓存
+  await loadIcons();    // 重新加载所有图标
+};
+
+// 当前选中的标签用于过滤
+const selectedTags = ref<string[]>([]);
+
+// 所有可用标签集合
+const allAvailableTags = computed(() => {
+  // 从所有图标中提取标签并计算每个标签的使用频率
+  const tagMap = new Map<string, number>();
+  
+  builtinIcons.value.forEach(icon => {
+    if (icon.tags && icon.tags.length > 0) {
+      icon.tags.forEach(tag => {
+        const count = tagMap.get(tag) || 0;
+        tagMap.set(tag, count + 1);
+      });
+    }
+  });
+  
+  return ['gray', 'music', 'video', 'document', 'workspace', 'download', 'themes', 'application', 'note', 'book', 'sharprect']
+});
+
+// 实际用于显示的图标列表（解决异步计算属性的问题）
+const displayIcons = ref<IconItem[]>([]);
+
+// 监听过滤条件变化，更新显示的图标列表
+watch([searchKeyword, selectedTags, builtinIcons], async () => {
+  // 如果图标还在加载，不执行过滤
+  if (loading.value) return;
+  
+  try {
+    if (!searchKeyword.value && selectedTags.value.length === 0) {
+      // 没有过滤条件，直接使用所有图标
+      displayIcons.value = builtinIcons.value;
+    } else {
+      // 有搜索关键字或标签过滤
+      let results = builtinIcons.value;
+      
+      // 先应用标签过滤
+      if (selectedTags.value.length > 0) {
+        results = await searchIconsByTags(selectedTags.value);
+      }
+      
+      // 再应用关键字搜索
+      if (searchKeyword.value) {
+        const searchResults = await searchIcons(searchKeyword.value);
+        displayIcons.value = searchResults.filter(icon => 
+          selectedTags.value.length === 0 || results.some(r => r.path === icon.path)
+        );
+      } else {
+        displayIcons.value = results;
+      }
+    }
+  } catch (error) {
+    console.error('过滤图标失败:', error);
+    displayIcons.value = builtinIcons.value;
+  }
+}, { immediate: true });
 
 // 存储已选图标的绝对路径
 const selectedIconPath = ref<string>('');
 
+// 选择标签进行过滤
+const toggleTag = (tag: string) => {
+  const index = selectedTags.value.indexOf(tag);
+  if (index >= 0) {
+    // 如果标签已经选中，则移除
+    selectedTags.value.splice(index, 1);
+    // 从搜索关键词中移除标签
+    searchKeyword.value = searchKeyword.value.replace(tag, '').trim();
+  } else {
+    // 否则添加标签
+    selectedTags.value.push(tag);
+    // 添加标签到搜索关键词
+    searchKeyword.value = searchKeyword.value ? `${searchKeyword.value} ${tag}` : tag;
+  }
+};
+
+// 清除所有选中的标签
+const clearTags = () => {
+  selectedTags.value = [];
+  searchKeyword.value = ''; // 同时清除搜索关键词
+};
+
 // 选择图标
-const selectIcon = (icon: { name: string; path: string; filePath?: string; originalFileName?: string }) => {
+const selectIcon = (icon: { name: string; path: string; filePath?: string; originalFileName?: string; tags?: string[] }) => {
   // 如果存在真实文件路径，优先使用，否则使用URL路径
   const finalPath = icon.filePath || icon.path;
   console.log('选择图标:', icon);
@@ -139,63 +242,39 @@ const downloadIconFromUrl = async () => {
     
     showSuccess(t('iconSelector.downloading'));
     
-    // 调用主进程下载图标
-    const result = await window.electron.ipcRenderer.invoke('download-icon-from-url', iconUrl.value);
+    // 调用主进程下载图标，使用类型安全的ipcHelper工具函数
+    const result = await ipcHelper.downloadIconFromUrl(iconUrl.value);
     
-    if (result.success) {
+    if (result.success && result.filePath && result.fileName) {
       const { filePath, fileName } = result;
       
       // 读取下载的图片文件为数据URL
-      const response = await window.electron.ipcRenderer.invoke('read-file', filePath);
-      const dataUrl = response.data;
+      const response = await ipcHelper.readFileAsDataUrl(filePath);
       
-      // 添加到自定义图标列表
-      customIcons.value.push({
-        name: fileName,
-        path: dataUrl,
-        data: dataUrl,
-        filePath: filePath
-      });
-      
-      showSuccess(t('iconSelector.downloadSuccess', [fileName]));
-      
-      // 清空URL输入框
-      iconUrl.value = '';
+      if (response.success && response.data) {
+        const dataUrl = response.data;
+        
+        // 添加到自定义图标列表
+        customIcons.value.push({
+          name: fileName,
+          path: dataUrl,
+          data: dataUrl,
+          filePath: filePath
+        });
+        
+        showSuccess(t('iconSelector.downloadSuccess', [fileName]));
+        
+        // 清空URL输入框
+        iconUrl.value = '';
+      } else {
+        showError(t('iconSelector.readFileError'));
+      }
     } else {
       showError(result.error || t('iconSelector.downloadFailed'));
     }
   } catch (error) {
     console.error('下载图标失败:', error);
     showError(t('iconSelector.downloadFailed'));
-  }
-};
-
-// 打开原生文件选择对话框
-const openIconFileDialog = async () => {
-  try {
-    const filePath = await window.api.selectIconFile();
-    if (filePath) {
-      // 获取文件名
-      const fileName = filePath.split('/').pop() || 'icon.png';
-      
-      // 创建数据URL用于显示
-      // 直接通过IPC调用读取文件
-      const response = await window.electron.ipcRenderer.invoke('read-file', filePath);
-      const dataUrl = response.data;
-      
-      customIcons.value.push({
-        name: fileName,
-        path: dataUrl,
-        data: dataUrl,
-        filePath: filePath
-      });
-      
-      showSuccess(t('iconSelector.iconAddedSuccess', [fileName]));
-      console.log('选择的文件路径:', filePath);
-    }
-  } catch (error) {
-    console.error('选择图标文件失败:', error);
-    showError(t('iconSelector.selectError'));
   }
 };
 
@@ -214,12 +293,32 @@ const clearSelectedIcon = () => {
   selectedIconPath.value = '';
 };
 
-// 从自定义图标切换回内置图标时清空搜索
-watch(activeKey, (newKey) => {
+// 监听选项卡切换
+watch(activeKey, async (newKey) => {
   if (newKey === 'default') {
     clearSearch();
+    clearTags();
+  } else if (newKey === 'custom') {
+    // 尝试从source-icons文件夹加载自定义图标
+    try {
+      // 尝试打开或刷新自定义图标目录
+      await ipcHelper.copyExampleIcons();
+      refreshIcons();
+    } catch (error) {
+      console.error('加载自定义图标目录失败:', error);
+    }
   }
 });
+
+// 打开自定义图标文件夹
+const openCustomIconsFolder = async () => {
+  try {
+    await ipcHelper.openCustomIconsDirectory();
+  } catch (error) {
+    console.error('打开自定义图标目录失败:', error);
+    showError(t('iconSelector.openFolderError'));
+  }
+};
 </script>
 
 <template>
@@ -236,14 +335,44 @@ watch(activeKey, (newKey) => {
             @clear="clearSearch"
           />
         </div>
+        <a-alert type="info"
+                 :message="t('iconSelector.useLocalSourceIconsHint')"
+                 show-icon/>
+        <!-- 标签过滤区域 -->
+        <div class="tags-container" v-if="allAvailableTags.length > 0">
+          <div class="tags-header">
+            <span class="tags-title">
+              <tag-outlined /> {{ t('iconSelector.tagFilter') }}
+            </span>
+            <a-button v-if="selectedTags.length > 0" type="link" size="small" @click="clearTags">{{ t('iconSelector.clearTags') }}</a-button>
+          </div>
+          <div class="tags-list">
+            <a-tag 
+              v-for="tag in allAvailableTags" 
+              :key="tag"
+              :color="selectedTags.includes(tag) ? '#18a058' : undefined"
+              style="margin-bottom: 5px; cursor: pointer;"
+              @click="toggleTag(tag)"
+            >
+              {{ tag }}
+            </a-tag>
+          </div>
+        </div>
         
-        <div v-if="filteredBuiltinIcons.length === 0" class="no-results">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+          <a-spin tip="加载图标中..."></a-spin>
+        </div>
+        
+        <!-- 无结果提示 -->
+        <div v-else-if="displayIcons.length === 0" class="no-results">
           <a-empty :description="t('iconSelector.noSearchResults')" />
         </div>
         
-        <div class="icons-container">
+        <!-- 图标列表 -->
+        <div v-else class="icons-container">
           <a-row :gutter="[12, 12]">
-            <a-col :span="6" v-for="icon in filteredBuiltinIcons" :key="icon.name" class="icon-item">
+            <a-col :span="6" v-for="icon in displayIcons" :key="icon.name" class="icon-item">
               <div 
                 class="icon-wrapper" 
                 :class="{ 
@@ -258,7 +387,6 @@ watch(activeKey, (newKey) => {
                   style="object-fit: contain;"
                 />
                 <div class="icon-name">{{ icon.name }}</div>
-                <div class="file-path">{{ icon.originalFileName }}.png</div>
               </div>
             </a-col>
           </a-row>
@@ -266,25 +394,37 @@ watch(activeKey, (newKey) => {
       </a-tab-pane>
       
       <a-tab-pane key="custom" :tab="t('iconSelector.customIconTab')">
-        <div
-          class="drop-area"
-          @drop="handleIconDrop"
-          @dragover.prevent
-          @dragenter.prevent
-        >
-          <div style="padding: 20px">
-            <p class="gradient-text">{{ t('iconSelector.dragUploadTip') }}</p>
-            <p>{{ t('iconSelector.supportFormats') }}</p>
-            
-            <a-button type="primary" ghost @click="openIconFileDialog" style="margin-right: 8px">
-              {{ t('iconSelector.selectFileBtn') }}
-            </a-button>
+        <div>
+          <p class="section-title">1. {{ t('iconSelector.chooseLocalImage') }}</p>
+          <div
+              class="drop-area"
+              @drop="handleIconDrop"
+              @dragover.prevent
+              @dragenter.prevent
+          >
+            <div style="padding: 20px">
+              <p class="gradient-text">{{ t('iconSelector.dragUploadTip') }}</p>
+              <p>{{ t('iconSelector.supportFormats') }}</p>
+
+              <a-button type="primary" ghost @click="openIconFileDialog" style="margin-right: 8px">
+                {{ t('iconSelector.selectFileBtn') }}
+              </a-button>
+              
+              <a-button @click="openCustomIconsFolder" style="margin-right: 8px">
+                打开自定义图标文件夹
+              </a-button>
+              
+              <a-button @click="refreshIcons" type="link">
+                刷新图标
+              </a-button>
+            </div>
           </div>
         </div>
+
         
         <!-- 添加URL输入框 -->
         <div class="url-input-container">
-          <p class="section-title">{{ t('iconSelector.fromUrl') }}</p>
+          <p class="section-title">2. {{ t('iconSelector.fromUrl') }}</p>
           <a-input-search
             v-model:value="iconUrl"
             :placeholder="t('iconSelector.urlPlaceholder')"
@@ -293,7 +433,8 @@ watch(activeKey, (newKey) => {
           />
           <p class="tip">{{ t('iconSelector.urlTip') }}</p>
         </div>
-        
+
+
         <div v-if="customIcons.length > 0" class="icons-container custom-icons">
           <p class="section-title">{{ t('iconSelector.customIcons') }}</p>
           <a-row :gutter="[12, 12]">
@@ -309,7 +450,27 @@ watch(activeKey, (newKey) => {
                   style="object-fit: contain;"
                 />
                 <div class="icon-name">{{ icon.name }}</div>
-                <div v-if="icon.filePath" class="file-path">{{ icon.filePath }}</div>
+              </div>
+            </a-col>
+          </a-row>
+        </div>
+        
+        <!-- 显示用户自定义源图标 -->
+        <div v-if="displayIcons.filter(icon => icon.isCustom).length > 0" class="icons-container source-icons">
+          <p class="section-title">3. 自定义源图标</p>
+          <a-row :gutter="[12, 12]">
+            <a-col :span="6" v-for="icon in displayIcons.filter(icon => icon.isCustom)" :key="icon.name" class="icon-item">
+              <div 
+                class="icon-wrapper" 
+                :class="{ 'selected': selectedIcon === icon.path }"
+                @click="selectIcon(icon)"
+              >
+                <img 
+                  :src="icon.path" 
+                  width="64" 
+                  style="object-fit: contain;"
+                />
+                <div class="icon-name">{{ icon.name }}</div>
               </div>
             </a-col>
           </a-row>
@@ -340,101 +501,108 @@ watch(activeKey, (newKey) => {
   margin-bottom: 12px;
 }
 
-.no-results {
-  margin-top: 20px;
-  text-align: center;
+.tags-container {
+  margin-bottom: 16px;
+  padding: 8px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.tags-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tags-title {
+  font-weight: bold;
+  font-size: 14px;
+  color: #333;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .icons-container {
-  min-height: 180px;
-  max-height: 60vh; /* 使用视窗高度的百分比设置最大高度 */
+  margin-top: 16px;
+  max-height: 400px; 
   overflow-y: auto;
-  margin-top: 12px;
-  padding-right: 8px; /* 为滚动条预留空间 */
-}
-
-.custom-icons {
-  margin-top: 12px;
-}
-
-.icon-item {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
+  padding-right: 8px;
 }
 
 .icon-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px;
-  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  height: 120px;
+  justify-content: space-between;
+  position: relative;
 }
 
 .icon-wrapper:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #1890ff;
 }
 
 .icon-wrapper.selected {
-  background-color: rgba(24, 160, 88, 0.1);
-  border: 2px solid #18a058;
-}
-
-.icon-wrapper.filtered {
-  background-color: rgba(24, 160, 88, 0.05);
-}
-
-.icon-name {
-  margin-top: 8px;
-  font-size: 12px;
-  text-align: center;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-path {
-  font-size: 9px;
-  color: #888;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.drop-area {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.drop-area:hover {
   border-color: #18a058;
   background-color: rgba(24, 160, 88, 0.1);
 }
 
-.custom-file-input {
-  cursor: pointer;
-  display: inline-block;
-  margin-top: 15px;
+.icon-wrapper.filtered {
+  border-color: #ff7a45;
+  background-color: rgba(255, 122, 69, 0.1);
+}
+
+.icon-name {
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  width: 100%;
+}
+
+.icon-item {
+  margin-bottom: 12px;
+}
+
+.drop-area {
+  border: 2px dashed #ddd;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.drop-area:hover {
+  border-color: #18a058;
+  background-color: rgba(24, 160, 88, 0.05);
 }
 
 .gradient-text {
-  background-image: linear-gradient(to right, #18a058, #36ad6a);
-  -webkit-background-clip: text;
-  color: transparent;
   font-weight: bold;
+  font-size: 16px;
+  background: linear-gradient(to right, #36d1dc, #5b86e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .url-input-container {
-  margin-top: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .section-title {
@@ -445,16 +613,13 @@ watch(activeKey, (newKey) => {
 
 .tip {
   font-size: 12px;
-  color: #888;
-  margin-top: 6px;
+  color: #999;
+  margin-top: 4px;
 }
 
-.selected-icon-path {
-  margin-top: 12px;
-  padding: 10px;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.no-results {
+  margin-top: 20px;
+  text-align: center;
 }
 
 .path-row {
@@ -464,5 +629,18 @@ watch(activeKey, (newKey) => {
 
 .clear-btn {
   margin-left: 8px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.custom-icons, .source-icons {
+  margin-top: 24px;
+  border-top: 1px solid #eee;
+  padding-top: 16px;
 }
 </style>

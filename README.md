@@ -7,12 +7,12 @@ A simple yet practical Mac folder icon management application that allows you to
 
 ## Features (功能)
 
+### Change Icon (换图标)
 
 - Built-in variety of beautiful folder icons
 - Icon search functionality by name or keywords
 - Support for drag-and-drop custom icons (PNG, JPG, and SVG formats)
 - Support for downloading icons from URL
-- Drag-and-drop folders to apply icons
 - Clean and user-friendly interface
 - Supports both Chinese and English interfaces
 
@@ -22,12 +22,23 @@ A simple yet practical Mac folder icon management application that allows you to
 - 支持图标搜索功能，可按名称或关键词查找
 - 支持拖放上传自定义图标（支持PNG、JPG和SVG格式）
 - 支持从URL下载图标
-- 拖放文件夹即可应用图标
 - 简洁友好的用户界面
 - 支持中英文界面
 
+### Icon Backup Management (图标备份管理)
 
-## Usage (使用方法)
+- Icon replacement information data is saved locally (can use iCloud folder for cloud synchronization)
+- One-click restore icon settings from local (or iCloud)
+- Place icons in the source-icons directory under the working directory, the program will automatically load these icons
+
+---
+
+- 图标替换信息数据保存本地(可使用icloud文件夹保持云同步)
+- 一键从本地（或icloud）恢复图标设置
+- 存入图标到 工作目录下source-icons 目录，程序会自动加载这批图标
+
+
+## Change Icon Usage (换图标使用方法)
 
 1. **Select Icon**:
    - Choose an icon from the default icon library

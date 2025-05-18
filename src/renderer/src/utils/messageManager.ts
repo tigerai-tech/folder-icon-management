@@ -1,4 +1,4 @@
-import { message } from 'ant-design-vue';
+import { message, Modal } from 'ant-design-vue';
 import { i18n } from './i18n';
 
 i18n.global.t;
@@ -33,4 +33,27 @@ export const showInfo = (content: string): void => {
  */
 export const showWarning = (content: string): void => {
   message.warning(content);
+};
+
+/**
+ * 显示确认对话框
+ * @param title 标题
+ * @param content 内容
+ * @returns Promise<boolean> 用户确认为true，取消为false
+ */
+export const showConfirm = (title: string, content: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    Modal.confirm({
+      title,
+      content,
+      okText: '确认',
+      cancelText: '取消',
+      onOk: () => {
+        resolve(true);
+      },
+      onCancel: () => {
+        resolve(false);
+      }
+    });
+  });
 }; 

@@ -5,6 +5,7 @@ declare global {
     electron: ElectronAPI
     api: {
       applyIconToFolder: (folderPath: string, iconPath: string) => Promise<void>
+      resetFolderIcon: (options: {folderPath: string, deleteFile: boolean}) => Promise<any>
       getDraggedFolderPath: (event: DragEvent) => string | null
       checkPath: (path: string) => Promise<{exists: boolean, isDirectory: boolean, path: string}>
       selectFolder: () => Promise<string | null>
