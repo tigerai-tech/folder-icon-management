@@ -1,8 +1,6 @@
 # Mac Folder Icon Manager (Mac文件夹图标管理器)
 
 
-![](https://tigerai-tech.github.io/static/mac-folder-icon-mgr.5ca93e31.png)
-
 A simple yet practical Mac folder icon management application that allows you to easily change folder icons.   
 一个简单而实用的Mac文件夹图标管理应用程序，让您可以轻松地更改文件夹的图标。
 
@@ -49,7 +47,9 @@ A simple yet practical Mac folder icon management application that allows you to
 --- 
 1. **选择图标 (Select Icon)**：
    - 从默认图标库中选择一个图标
+     ![](./docs/apply-buildin-png.png)
    - 使用自定义图标：下载、上传或从URL添加图片
+     ![](./docs/apply-upload-images.png)
 
 2. **选择文件夹**：
    - 方法1：将目标文件夹拖放到指定区域
