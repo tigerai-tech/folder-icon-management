@@ -3,11 +3,17 @@
 ![](./docs/post.png)
   
 A simple yet practical Mac folder icon management application that allows you to easily change folder icons.   
-一个简单而实用的Mac文件夹图标管理应用程序，让您可以轻松地更改文件夹的图标。
+一个简单而实用的Mac文件夹图标管理应用程序，让您可以轻松地更改文件夹的图标。  
+
+
+I don't understand why this kind of software still needs to be paid for, so we can only make one ourselves (of course, with the help of AI's powerful force).  
+不懂为什么这种软件还要付费，只好我们手撸一个(当然借助AI的强大力量)。
+
 
 
 ## Features (功能)
 ![](./docs/Effect-Display.png)
+Effect Display 效果展示 
 
 ### Change Icon (换图标)
 
@@ -71,6 +77,26 @@ A simple yet practical Mac folder icon management application that allows you to
 3. **应用图标**：
    - 点击"应用图标到文件夹"按钮，即可完成图标更换
 
+## AI-powered Icon Scrawler (ICON图片抓取和分析工具)
+
+![img.png](docs/scrawler.png)
+
+**[Folder Icon Scrawl and Annotation Tool 文件夹图片爬虫和标注工具](https://github.com/tigerai-tech/folder-icon-annotation.git)**
+
+We also provide a crawler and analysis to help you scrape more beautiful images from websites.  
+我们也提供了一个爬虫和分析， 帮助你从网站上抓取更多的漂亮图片。  
+
+Provide the following capabilities：
+- Image crawler
+- Folder icon recognition (binary classification: yes/no)
+- Labeling folder icons for search
+
+提供以下能力：  
+- 图片爬虫
+- 文件夹图标识别(二分类：是/否)
+- 为文件夹图标贴标签，用于搜索
+
+
 ## Build from Source  (从源代码构建)
 
 ```bash
@@ -100,6 +126,15 @@ pnpm build:mac
 This application requires permissions to modify folder icons, so you may be asked to provide system permissions during use.  
 
 此应用需要权限来修改文件夹图标，因此在使用过程中可能会要求您提供系统权限。
+
+
+## Need your support (感谢支持)
+
+- Feel free to raise an Issue directly for any questions or requests
+- Please help by starring, your support is the greatest motivation for open source creation
+---
+- 有问题或需求直接提Issue
+- 请帮忙加星， 你的支持是开源创作的最大动力
 
 ## License (许可)
 
